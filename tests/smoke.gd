@@ -191,6 +191,29 @@ func _execute() -> void:
 	_check(specialists.restore(migrated_v2), "v2 save migrates into v3")
 	_check(specialists.prestige_cores == 0, "legacy saves do not claim permanent cores")
 
+	# Tier-2 industrial machines require component processing and consume inputs.
+	var chain: IndustryState = IndustryScript.new()
+	root.add_child(chain)
+	chain.tech_level = 4
+	chain.energy = 100000.0
+	chain.alloy = 10000.0
+	chain.data = 10000.0
+	_check(chain.buy_machine("fabricator"), "fabricator can be constructed")
+	chain.tick(1.0)
+	_check(chain.components > 0.0, "fabricator outputs components")
+	_check(chain.components_produced >= chain.components, "lifetime production tracked")
+	chain.components = 100.0
+	_check(chain.buy_machine("harvester"), "void harvester requires components")
+	var void_before: float = chain.void_matter
+	chain.tick(1.0)
+	_check(chain.void_matter > void_before, "harvester converts components and data to void")
+	var encoded: Variant = JSON.parse_string(JSON.stringify(chain.to_save()))
+	_check(chain.restore(encoded), "version 4 save roundtrip")
+	_check(chain.salvage_machine("fabricator"), "machine can be deconstructed")
+	_check(not chain.salvage_machine("fabricator"), "cannot deconstruct nonexistent machine")
+	var broken: Dictionary = chain.to_save()
+	broken["components_produced"] = 0.0
+	_check(not chain.restore(broken), "invalid component history rejected")
 	if failures == 0:
 		print("SMOKE_TEST_PASS: %d assertions" % assertions)
 	else:

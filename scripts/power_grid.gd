@@ -45,7 +45,7 @@ static func solve(pads: Array) -> Dictionary:
 		var kind: String = str(pads[i].get("kind", ""))
 		if counts.has(kind):
 			counts[kind] = int(counts[kind]) + 1
-	var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0}
+	var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0, "extractor_fabricator": 0, "stabilizer_harvester": 0}
 	for i in range(total):
 		if not visited[i]:
 			continue
@@ -65,4 +65,8 @@ static func solve(pads: Array) -> Dictionary:
 				synergies["generator_capacitor"] = int(synergies["generator_capacitor"]) + 1
 			elif (kind_a == "turret" and kind_b == "stabilizer") or (kind_a == "stabilizer" and kind_b == "turret"):
 				synergies["turret_stabilizer"] = int(synergies["turret_stabilizer"]) + 1
+			elif (kind_a == "extractor" and kind_b == "fabricator") or (kind_a == "fabricator" and kind_b == "extractor"):
+				synergies["extractor_fabricator"] = int(synergies["extractor_fabricator"]) + 1
+			elif (kind_a == "stabilizer" and kind_b == "harvester") or (kind_a == "harvester" and kind_b == "stabilizer"):
+				synergies["stabilizer_harvester"] = int(synergies["stabilizer_harvester"]) + 1
 	return {"powered": visited, "counts": counts, "links": links, "connected": next.size(), "synergies": synergies}

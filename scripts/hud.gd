@@ -29,13 +29,15 @@ func _ready() -> void:
 	title_label = _label(top_box, "VOID // INDUSTRIES", 23, Color(0.45, 0.93, 0.94))
 	resource_label = _label(top_box, "INITIALISIERUNG", 17, Color(0.89, 0.96, 1.0))
 	vitals_label = _label(top_box, "", 13, Color(0.78, 0.85, 0.92))
-	var side_panel := _panel(root, Vector2(-385, 20), Vector2(378, 294), true)
+	var side_panel := _panel(root, Vector2(-385, 20), Vector2(378, 336), true)
 	var side_box := _column(side_panel)
 	_label(side_box, "FABRIK // KONSTRUKTION", 18, Color(0.45, 0.93, 0.94))
 	build_label = _label(side_box, "", 15, Color(0.9, 0.93, 0.96))
 	_label(side_box, "1 GENERATOR     2 EXTRAKTOR", 13, Color(0.72, 0.86, 0.91))
 	_label(side_box, "3 LABOR          4 GESCHUETZ", 13, Color(0.72, 0.86, 0.91))
 	_label(side_box, "5 KONDENSATOR   6 STABILISATOR", 13, Color(0.72, 0.86, 0.91))
+	_label(side_box, "7 FABRIKATOR      8 VOID-HARVESTER", 13, Color(0.72, 0.86, 0.91))
+	_label(side_box, "J DEMONTIEREN (40% RUECKGABE)", 13, Color(0.72, 0.86, 0.91))
 	_label(side_box, "E BAUEN     F FORSCHEN     Q BELOHNUNG", 13, Color(0.72, 0.86, 0.91))
 	_label(side_box, "R EXPERIMENT   G SICHER   T REPARATUR", 13, Color(0.72, 0.86, 0.91))
 	_label(side_box, "C NETZ-PULS (bei voller Ladung)", 13, Color(0.72, 0.86, 0.91))
@@ -74,7 +76,7 @@ func _ready() -> void:
 	_label(help_box, "VOID INDUSTRIES // OPERATOREN-HANDBUCH", 23, Color(0.45, 0.93, 0.94))
 	_label(help_box, "DER KOMPLEX  •  DEIN ZIEL", 17, Color(0.97, 0.77, 0.49))
 	_label(help_box, "Erzeuge Energie, baue ein zusammenhaengendes Maschinen-Netz und erforsche immer riskantere Technologien. Steht eine Maschine nicht in Reichweite des Reaktors oder anderer aktiver Maschinen, produziert sie nichts.", 15, Color(0.89, 0.94, 0.99))
-	_label(help_box, "WASD laufen  |  SHIFT sprinten  |  LEERTASTE springen\nMAUS drehen  |  RAD zoomen  |  TAB Baukamera\n1–6 Maschinentyp  |  E bauen (nahe Plattform)\nF Forschung  |  Z/X/V Forschungszweige\nR Riskantes Experiment  |  G Sichereres Experiment\nC Netz-Puls  |  Q Auftrag einloesen  |  T reparieren\nLINKSKLICK schiessen  |  Y Elite-Kampf (Stufe 4+)\nB Prestige (zweimal bestaetigen)\nP Lokal speichern  |  O Lokal laden\nESC Maus freigeben  |  H Handbuch anzeigen/schliessen", 14, Color(0.87, 0.93, 0.96))
+	_label(help_box, "WASD laufen  |  SHIFT sprinten  |  LEERTASTE springen\nMAUS drehen  |  RAD zoomen  |  TAB Baukamera\n1–8 Maschinentyp  |  E bauen  |  J abbauen\nF Forschung  |  Z/X/V Forschungszweige\nR Riskantes Experiment  |  G Sichereres Experiment\nC Netz-Puls  |  Q Auftrag einloesen  |  T reparieren\nLINKSKLICK schiessen  |  Y Elite-Kampf (Stufe 4+)\nB Prestige (zweimal bestaetigen)\nP Lokal speichern  |  O Lokal laden\nESC Maus freigeben  |  H Handbuch anzeigen/schliessen", 14, Color(0.87, 0.93, 0.96))
 	_label(help_box, "DATENSCHUTZ", 16, Color(0.45, 0.93, 0.94))
 	_label(help_box, "Kein Login. Keine Telemetrie. Offline spielbar. Speicherungen ausschliesslich nach Tastendruck auf P in den lokalen App-Daten.", 14, Color(0.87, 0.93, 0.96))
 
@@ -124,19 +126,19 @@ func toggle_help() -> void:
 
 func refresh(state: IndustryState, player_health: float, selected: String, enemy_count: int, connected_count: int) -> void:
 	var production: Dictionary = state.get_production()
-	resource_label.text = "ENERGIE  %s  (+%s/s)\nLEGIERUNG %s (+%s/s)  |  DATEN %s (+%s/s)\nVOID %s  |  FEINDE %d" % [
+	resource_label.text = "ENERGIE  %s (+%s/s)\nLEGIERUNG %s (+%s/s) | DATEN %s (+%s/s)\nBAUTEILE %s (+%s/s) | VOID %s | FEINDE %d" % [
 		_num(state.energy), _num(float(production["energy"])),
 		_num(state.alloy), _num(float(production["alloy"])), _num(state.data),
-		_num(float(production["data"])), _num(state.void_matter), enemy_count]
+		_num(float(production["data"])), _num(state.components), _num(float(production["components"])), _num(state.void_matter), enemy_count]
 	vitals_label.text = "KERN %d%%   ANZUG %d%%   INSTABILITAET %d%%" % [
 		int(state.core_health), int(player_health), int(state.instability)]
 	var cost: Dictionary = state.get_cost(selected)
 	var lock_text: String = ""
 	if not state.is_unlocked(selected):
 		lock_text = "  [FORSCHUNG ST. %d]" % int(IndustryState.UNLOCKS[selected])
-	build_label.text = "GEWAEHLT: %s%s\nPREIS: %d E | %d L | %d D" % [
+	build_label.text = "GEWAEHLT: %s%s\nPREIS: %d E | %d L | %d D | %d B" % [
 		selected.to_upper(), lock_text,
-		int(cost.get("energy", 0)), int(cost.get("alloy", 0)), int(cost.get("data", 0))]
+		int(cost.get("energy", 0)), int(cost.get("alloy", 0)), int(cost.get("data", 0)), int(cost.get("components", 0))]
 	var price: Dictionary = state.research_cost()
 	if state.tech_level >= IndustryState.MAX_LEVEL:
 		research_label.text = "FORSCHUNG: ALLE PROTOKOLLE ENTDECKT"

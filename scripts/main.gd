@@ -272,6 +272,14 @@ func _build_machine(index: int, kind: String) -> void:
 				var a: float = TAU * float(i) / 4.0
 				_pipe(Vector3(cos(a) * 0.85, 0.95, sin(a) * 0.85), Vector3(cos(a) * 0.85, 2.55, sin(a) * 0.85), 0.11, mat_steel, machine)
 			animated_parts.append(_cylinder(Vector3(0, 2.85, 0), 0.9, 0.18, mat_amber, false, machine))
+		"fabricator":
+			_box(Vector3(2.25, 1.45, 2.25), Vector3(0, 1.5, 0), mat_dark, false, machine)
+			_box(Vector3(1.7, 0.24, 1.7), Vector3(0, 2.35, 0), mat_amber, false, machine)
+			animated_parts.append(_cylinder(Vector3(0, 2.75, 0), 0.55, 0.2, mat_neon, false, machine))
+		"harvester":
+			_cylinder(Vector3(0, 1.45, 0), 1.0, 1.8, mat_dark, false, machine)
+			_cylinder(Vector3(0, 2.7, 0), 0.68, 0.8, mat_red, false, machine)
+			animated_parts.append(_cylinder(Vector3(0, 3.5, 0), 1.02, 0.18, mat_amber, false, machine))
 		"stabilizer":
 			_box(Vector3(2.2, 1.4, 2.2), Vector3(0, 1.3, 0), mat_dark, false, machine)
 			for i in range(4):
@@ -329,6 +337,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_4: selected_machine = "turret"
 		KEY_5: selected_machine = "capacitor"
 		KEY_6: selected_machine = "stabilizer"
+		KEY_7: selected_machine = "fabricator"
+		KEY_8: selected_machine = "harvester"
+		KEY_J: _try_salvage()
 		KEY_E: _try_build()
 		KEY_F: state.research()
 		KEY_R: state.experiment()
@@ -366,6 +377,30 @@ func _try_build() -> void:
 		_recalculate_power_grid()
 		if state.machine_count(selected_machine) < int(state.machines[selected_machine]):
 			hud.announce("ACHTUNG: Maschine ohne Energieanschluss! Baue Richtung Reaktorkern.")
+
+func _try_salvage() -> void:
+	var nearest: int = -1
+	var closest: float = 5.1
+	for i in range(pads.size()):
+		if str(pads[i]["kind"]) == "":
+			continue
+		var at: Vector3 = pads[i]["position"]
+		var distance: float = at.distance_to(Vector3(player.position.x, 0, player.position.z))
+		if distance < closest:
+			closest = distance
+			nearest = i
+	if nearest < 0:
+		hud.announce("Keine gebaute Maschine in Reichweite.")
+		return
+	var kind: String = str(pads[nearest]["kind"])
+	if state.salvage_machine(kind):
+		var node: Variant = pads[nearest]["machine_node"]
+		if is_instance_valid(node):
+			node.queue_free()
+		pads[nearest]["machine_node"] = null
+		pads[nearest]["kind"] = ""
+		animated_parts = animated_parts.filter(func(part: Node3D) -> bool: return is_instance_valid(part) and not part.is_queued_for_deletion() and part.get_parent() != node)
+		_recalculate_power_grid()
 
 func _try_elite_trial() -> void:
 	for threat in enemies:
@@ -527,7 +562,7 @@ func _save_game() -> void:
 	var serialized_pads: Array[String] = []
 	for pad in pads:
 		serialized_pads.append(str(pad["kind"]))
-	var snapshot := {"version": 3, "state": state.to_save(), "pads": serialized_pads}
+	var snapshot := {"version": 4, "state": state.to_save(), "pads": serialized_pads}
 	var data_string: String = JSON.stringify(snapshot)
 	if data_string.length() > SAVE_LIMIT:
 		hud.announce("Spielstand zu gross. Speichern abgebrochen.")
@@ -571,7 +606,7 @@ func _load_game() -> void:
 		hud.announce("Ungueltiger Spielstand.")
 		return
 	var parsed: Dictionary = document
-	if parsed.get("version", -1) != 1 and parsed.get("version", -1) != 2 and parsed.get("version", -1) != 3:
+	if not [1, 2, 3, 4].has(parsed.get("version", -1)):
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
 	var restored_pads: Variant = parsed.get("pads", [])
