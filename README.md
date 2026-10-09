@@ -3,7 +3,7 @@
 Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten Experimenten, begehbarer Fabrik und gelegentlichen Kämpfen. **Open Source – MIT-Lizenz.**
 
 ## Status
-**Version 0.3 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
+**Version 0.4 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
 
 ## Datenschutz als Architekturprinzip
 - Kein Account, keine Werbung, keine Online-Schnittstellen, kein HTTP, keine Telemetrie.
@@ -36,6 +36,8 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | Tab | Taktische Kamera ein/aus |
 | 1 / 2 / 3 / 4 | Generator / Extraktor / Labor / Turm auswählen |
 | 5 / 6 | Kondensator / Stabilisator wählen (Forschung nötig) |
+| 7 / 8 | Fabrikator / Void-Harvester (ab Forschungsstufe 3 / 4) |
+| J | Nächstgelegene Maschine abbauen und 40 % des Grundmaterialwerts zurückbekommen |
 | E | Maschine auf der nächsten freien Bauplattform errichten |
 | F | Forschung kaufen |
 | R | Riskantes Experiment starten |
@@ -53,6 +55,15 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 ## Grundschleife
 Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschinen freischalten → Aufträge erfüllen und Belohnungen abholen → riskante oder stabilisierte Experimente durchführen → Anomalien abwehren → Produktionsboost nutzen. Die Produktion läuft beim Kämpfen weiter.
 
+### Neue Systeme in Version 0.4
+- **Bauteile als Ressource:** Fabrikatoren konsumieren Energie und Legierungen, um Bauteile herzustellen.
+- **Void-Harvester:** Nutzen Bauteile, Forschungsdaten und Energie, um Void-Materie automatisch zu gewinnen. Die Produktion erhöht geringfügig die Instabilität.
+- **Neue Platzierungs-Synergien:** Extraktor neben Fabrikator verbessert Bauteil-Produktion; Stabilisator neben Harvester verbessert Void-Ausbeute.
+- **Demontage:** `J` baut eine nahe Maschine ab und gibt 40 % des vorherigen Baupreises in Ressourcen zurück. Die Stromversorgung der verbliebenen Anlage wird sofort aktualisiert.
+- **Speicherformat 4:** Beinhaltet Bauteilvorrat und produzierte Gesamtmenge. Liest ältere Spielstände der Versionen 1–3. Alles bleibt lokal und manuell.
+- **Mehr Aufträge:** Die Kampagne erhält zusätzliche Zwischenziele für Bauteilproduktion und Void-Harvesting.
+- **Weiterhin Pre-Alpha:** Prozedurale Platzhaltermodelle und fehlende große Welten, Sound/Animationen und Windows-Grafiktests bleiben offene Aufgaben.
+
 ### Neue Systeme in Version 0.3
 - **Physisches Energie-Netzwerk:** Nur Maschinen, die über sichtbare Leitungen mit dem Reaktor verbunden sind, arbeiten. Neue Maschinen können andere Maschinen als Verbindungsbrücke versorgen. Nicht verbundene Module werden markiert.
 - **Drei Produktionskombinationen:** Extraktor neben Labor erhöht Forschungsdaten, Generator neben Kondensator erhöht Laderate und Stabilisator neben Geschützturm erhöht dessen Angriffskraft. Alle Kombinationen erfordern aktive Verbindungen.
@@ -61,7 +72,7 @@ Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschin
 - **Gelegentliche Bedrohungen:** Experimentbedingte Anomalien, dazu ein seltener Gefahrendirektor bei hoher Instabilität; Kämpfe unterbrechen die Produktion nicht.
 - **Elite-Anomalie:** Freiwillige Bossprüfung ab Forschung 4 mit deutlich stärkerem Gegner und besonderen Ressourcenbelohnungen.
 - **Ingame-Handbuch:** `H` zeigt Steuerung, Strategie und Datenschutz ohne Internetverbindung.
-- **Spielstandformat v3:** liest ältere v1/v2-Spielstände, speichert neue Forschungszweige und Prestige-Fortschritt. Keine automatische Dateisynchronisation.
+- **Spielstandformat v3 (historisch):** liest ältere v1/v2-Spielstände, speichert neue Forschungszweige und Prestige-Fortschritt. Keine automatische Dateisynchronisation.
 
 ### Neue Systeme in Version 0.2
 - **8 Direktiven:** konkrete Ziele, sichtbarer Fortschritt und optionale Belohnungen; `Q` holt fertige Aufträge ab.
@@ -85,6 +96,7 @@ Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschine
 - [x] Windows-Build-Pipeline und grundlegende Tests
 - [ ] Hochwertige 3D-Modelle, Charakteranimationen, Sounddesign, optimierte PBR-Materialien
 - [x] Stromnetz-Abhängigkeiten, drei Forschungszweige und erstes Prestige-System
-- [ ] Größere Produktionsketten, Logistikbänder, Forschung über mehrere Sektoren und Prestige-Erweiterungen
+- [x] Bauteile und automatische Void-Verarbeitung als erste mehrstufige Produktionsketten
+- [ ] Freie Platzierung, physische Logistikbänder, weitere Ressourcen und Prestige-Erweiterungen
 - [ ] Barrierefreiheit, Controller, Übersetzungen
 - [ ] Balancing, Windows-11-Grafiktests, Sicherheitsreview durch Dritte, Steam-Release

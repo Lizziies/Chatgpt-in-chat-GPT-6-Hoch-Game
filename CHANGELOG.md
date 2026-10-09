@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## Pre-Alpha 0.4 — 2026-10-09
+- Fabrikator und Void-Harvester als neue 3D-Maschinentypen hinzugefügt.
+- Bauteile als lagerbare neue Ressource und Komponenten-Gesamtproduktionszähler.
+- Mehrstufige Ressourcenverarbeitung unter Berücksichtigung verfügbarer Eingangsstoffe.
+- Zwei neue Bonus-Kombinationen bei benachbarten, stromversorgten Maschinen.
+- Maschinen-Demontage mit 40 % Rückgabe und erneuter Netzberechnung.
+- Drei neue Produktionsdirektiven.
+- Neues lokales Speicherformat 4; v1/v2/v3 werden weiterhin gelesen.
+- Tests für neue Maschinen, Input-Knappheit, Speicherformat und Demontage.
+
 ## Pre-Alpha 0.3 — 2026-10-09
 - Stromgebundene Fabrik mit dynamisch gezeichneten Energie-Verbindungskabeln.
 - Drei neue Nachbarschafts-Kombinationen und entsprechende Produktions- bzw. Kampfvorteile.
