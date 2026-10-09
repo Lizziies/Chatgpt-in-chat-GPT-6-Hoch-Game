@@ -191,6 +191,16 @@ func upgrade_branch(kind: String) -> bool:
 	status.emit("SPEZIALISIERUNG ERFORSCHT: " + kind.to_upper() + " STUFE " + str(branches[kind]))
 	return true
 
+func authorize_containment_trial() -> bool:
+	if tech_level < 4 or energy < 850.0 or data < 190.0:
+		status.emit("ELITE-TEST: Stufe 4, 850 Energie und 190 Daten erforderlich.")
+		return false
+	energy -= 850.0
+	data -= 190.0
+	instability = minf(100.0, instability + 18.0)
+	status.emit("EINSPERRUNGS-PROTOKOLL: Elite-Anomalie freigesetzt!")
+	return true
+
 func prestige_eligible() -> bool:
 	return tech_level >= 5 and void_matter >= 8.0 and data >= 800.0 and energy >= 3500.0
 

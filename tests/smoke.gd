@@ -170,6 +170,9 @@ func _execute() -> void:
 	specialists.void_matter = 10.0
 	specialists.machines["generator"] = 5
 	_check(specialists.prestige_eligible(), "tech threshold allows prestige")
+	var old_data: float = specialists.data
+	_check(specialists.authorize_containment_trial(), "voluntary elite test authorized")
+	_check(specialists.data < old_data, "trial consumes science resources")
 	_check(specialists.initiate_prestige(), "singularity resets temporary systems")
 	_check(specialists.tech_level == 0, "prestige resets tech")
 	_check(int(specialists.machines["generator"]) == 0, "prestige resets machines")

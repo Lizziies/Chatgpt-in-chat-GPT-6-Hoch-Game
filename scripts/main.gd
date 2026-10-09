@@ -338,6 +338,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_X: state.upgrade_branch("industry")
 		KEY_V: state.upgrade_branch("containment")
 		KEY_B: _try_prestige()
+		KEY_Y: _try_elite_trial()
 		KEY_T: state.repair_core()
 		KEY_P: _save_game()
 		KEY_O: _load_game()
@@ -363,6 +364,17 @@ func _try_build() -> void:
 		_recalculate_power_grid()
 		if state.machine_count(selected_machine) < int(state.machines[selected_machine]):
 			hud.announce("ACHTUNG: Maschine ohne Energieanschluss! Baue Richtung Reaktorkern.")
+
+func _try_elite_trial() -> void:
+	for threat in enemies:
+		if is_instance_valid(threat) and threat.live and threat.elite:
+			hud.announce("ELITE-TEST: Eine Elite-Anomalie ist bereits aktiv.")
+			return
+	if enemies.size() >= 23:
+		hud.announce("ELITE-TEST: Zu viele aktive Feinde.")
+		return
+	if state.authorize_containment_trial():
+		_spawn_breach(1, true)
 
 func _try_prestige() -> void:
 	if not state.prestige_eligible():
@@ -425,7 +437,7 @@ func _on_status(message: String) -> void:
 	if is_instance_valid(hud):
 		hud.announce(message)
 
-func _spawn_breach(amount: int) -> void:
+func _spawn_breach(amount: int, spawn_elite: bool = false) -> void:
 	for i in range(mini(amount, 12)):
 		if enemies.size() >= 24:
 			break
@@ -433,10 +445,10 @@ func _spawn_breach(amount: int) -> void:
 		var angle: float = randf_range(0.0, TAU)
 		var radius: float = randf_range(24.0, 33.0)
 		e.position = Vector3(cos(angle) * radius, 1.0, sin(angle) * radius)
-		e.initialize(player, state.tech_level)
+		e.initialize(player, state.tech_level, spawn_elite)
 		e.core_struck.connect(_on_core_hit)
 		e.player_struck.connect(_on_player_hit)
-		e.destroyed.connect(_on_enemy_destroyed)
+		e.destroyed.connect(_on_enemy_destroyed.bind(spawn_elite))
 		add_child(e)
 		enemies.append(e)
 
@@ -450,9 +462,14 @@ func _on_respawn() -> void:
 	state.energy *= 0.85
 	hud.announce("OPERATOR GERETTET. Notfall-Rueckkehr: 15% Energie verloren.")
 
-func _on_enemy_destroyed(_at: Vector3) -> void:
+func _on_enemy_destroyed(_at: Vector3, was_elite: bool = false) -> void:
 	state.waves_survived += 1
 	state.alloy = minf(IndustryState.MAX_RESOURCES, state.alloy + 6.0)
+	if was_elite:
+		state.void_matter = minf(IndustryState.MAX_RESOURCES, state.void_matter + 4.0)
+		state.data = minf(IndustryState.MAX_RESOURCES, state.data + 170.0)
+		state.alloy = minf(IndustryState.MAX_RESOURCES, state.alloy + 110.0)
+		hud.announce("ELITE BESIEGT! +4 VOID, +170 DATEN, +110 LEGIERUNG!")
 	# defer so removed nodes are not used on the current physics tick
 	call_deferred("_prune_enemies")
 

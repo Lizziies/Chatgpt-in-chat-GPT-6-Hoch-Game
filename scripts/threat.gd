@@ -12,44 +12,46 @@ var damage: float = 7.0
 var target: Node3D
 var attack_timer: float = 0.0
 var live: bool = true
+var elite: bool = false
 var body_mesh: MeshInstance3D
 
-func initialize(player_target: Node3D, tier: int = 0) -> void:
+func initialize(player_target: Node3D, tier: int = 0, elite_mode: bool = false) -> void:
 	target = player_target
-	health = 70.0 + float(tier) * 26.0
-	speed = 3.2 + float(tier) * 0.22
-	damage = 7.0 + float(tier) * 2.0
+	elite = elite_mode
+	health = (70.0 + float(tier) * 26.0) * (5.0 if elite else 1.0)
+	speed = (3.2 + float(tier) * 0.22) * (0.82 if elite else 1.0)
+	damage = (7.0 + float(tier) * 2.0) * (2.1 if elite else 1.0)
 
 func _ready() -> void:
-	name = "Hostile_Anomaly"
+	name = "Elite_Anomaly" if elite else "Hostile_Anomaly"
 	collision_layer = 4
 	collision_mask = 1
 	var shape := CapsuleShape3D.new()
-	shape.radius = 0.49
-	shape.height = 1.9
+	shape.radius = 0.8 if elite else 0.49
+	shape.height = 2.8 if elite else 1.9
 	var col := CollisionShape3D.new()
 	col.shape = shape
-	col.position.y = 1.0
+	col.position.y = 1.4 if elite else 1.0
 	add_child(col)
 	body_mesh = MeshInstance3D.new()
 	var mesh := CapsuleMesh.new()
-	mesh.radius = 0.48
-	mesh.height = 1.9
+	mesh.radius = 0.75 if elite else 0.48
+	mesh.height = 2.8 if elite else 1.9
 	body_mesh.mesh = mesh
-	body_mesh.position.y = 1.0
+	body_mesh.position.y = 1.4 if elite else 1.0
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.18, 0.31, 0.27)
+	material.albedo_color = Color(0.36, 0.08, 0.11) if elite else Color(0.18, 0.31, 0.27)
 	material.emission_enabled = true
-	material.emission = Color(0.02, 0.45, 0.26)
+	material.emission = Color(0.95, 0.04, 0.06) if elite else Color(0.02, 0.45, 0.26)
 	material.emission_energy_multiplier = 1.7
 	material.roughness = 0.63
 	body_mesh.material_override = material
 	add_child(body_mesh)
 	var eye := MeshInstance3D.new()
 	var eye_mesh := BoxMesh.new()
-	eye_mesh.size = Vector3(0.58, 0.12, 0.11)
+	eye_mesh.size = Vector3(0.95, 0.18, 0.13) if elite else Vector3(0.58, 0.12, 0.11)
 	eye.mesh = eye_mesh
-	eye.position = Vector3(0, 1.4, -0.45)
+	eye.position = Vector3(0, 2.05, -0.72) if elite else Vector3(0, 1.4, -0.45)
 	var eye_material := StandardMaterial3D.new()
 	eye_material.albedo_color = Color(1, 0.22, 0.08)
 	eye_material.emission_enabled = true
