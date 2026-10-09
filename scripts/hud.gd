@@ -13,6 +13,7 @@ var power_label: Label
 var specialty_label: Label
 var prestige_label: Label
 var help_panel: PanelContainer
+var logistics_label: Label
 var vitals_label: Label
 var toast_label: Label
 var toast_timer: float = 0.0
@@ -47,10 +48,11 @@ func _ready() -> void:
 	var task_box := _column(task_panel)
 	_label(task_box, "DIREKTIVE // PRODUKTIONSZIELE", 14, Color(0.45, 0.93, 0.94))
 	mission_label = _label(task_box, "", 13, Color(0.90, 0.92, 0.97))
-	var power_panel := _panel(root, Vector2(22, 349), Vector2(440, 91))
+	var power_panel := _panel(root, Vector2(22, 349), Vector2(440, 122))
 	var power_box := _column(power_panel)
 	_label(power_box, "REAKTOR // ENERGIE-NETZWERK", 14, Color(0.45, 0.93, 0.94))
 	power_label = _label(power_box, "", 13, Color(0.90, 0.92, 0.97))
+	logistics_label = _label(power_box, "", 12, Color(0.86, 0.65, 0.45))
 	var upgrade_panel := _panel(root, Vector2(-398, 380), Vector2(378, 215), true)
 	var upgrade_box := _column(upgrade_panel)
 	_label(upgrade_box, "FORSCHUNGSZWEIGE // AB STUFE 2", 14, Color(0.45, 0.93, 0.94))
@@ -76,7 +78,7 @@ func _ready() -> void:
 	_label(help_box, "VOID INDUSTRIES // OPERATOREN-HANDBUCH", 23, Color(0.45, 0.93, 0.94))
 	_label(help_box, "DER KOMPLEX  •  DEIN ZIEL", 17, Color(0.97, 0.77, 0.49))
 	_label(help_box, "Erzeuge Energie, baue ein zusammenhaengendes Maschinen-Netz und erforsche immer riskantere Technologien. Steht eine Maschine nicht in Reichweite des Reaktors oder anderer aktiver Maschinen, produziert sie nichts.", 15, Color(0.89, 0.94, 0.99))
-	_label(help_box, "WASD laufen  |  SHIFT sprinten  |  LEERTASTE springen\nMAUS drehen  |  RAD zoomen  |  TAB Baukamera\n1–8 Maschinentyp  |  E bauen  |  J abbauen\nF Forschung  |  Z/X/V Forschungszweige\nR Riskantes Experiment  |  G Sichereres Experiment\nC Netz-Puls  |  Q Auftrag einloesen  |  T reparieren\nLINKSKLICK schiessen  |  Y Elite-Kampf (Stufe 4+)\nB Prestige (zweimal bestaetigen)\nP Lokal speichern  |  O Lokal laden\nESC Maus freigeben  |  H Handbuch anzeigen/schliessen", 14, Color(0.87, 0.93, 0.96))
+	_label(help_box, "WASD laufen  |  SHIFT sprinten  |  LEERTASTE springen\nMAUS drehen  |  RAD zoomen  |  TAB Baukamera\n1–8 Maschine | E frei bauen | J abbauen | K Band | L Band weg\nF Forschung  |  Z/X/V Forschungszweige\nR Riskantes Experiment  |  G Sichereres Experiment\nC Netz-Puls  |  Q Auftrag einloesen  |  T reparieren\nLINKSKLICK schiessen  |  Y Elite-Kampf (Stufe 4+)\nB Prestige (zweimal bestaetigen)\nM Ton umschalten | K Foerderband | L Band abbauen\nP Lokal speichern  |  O Lokal laden\nESC Maus freigeben  |  H Handbuch anzeigen/schliessen", 14, Color(0.87, 0.93, 0.96))
 	_label(help_box, "DATENSCHUTZ", 16, Color(0.45, 0.93, 0.94))
 	_label(help_box, "Kein Login. Keine Telemetrie. Offline spielbar. Speicherungen ausschliesslich nach Tastendruck auf P in den lokalen App-Daten.", 14, Color(0.87, 0.93, 0.96))
 
@@ -190,3 +192,7 @@ func _num(amount: float) -> String:
 	if amount >= 10000.0:
 		return "%.1fK" % (amount / 1000.0)
 	return str(int(amount))
+
+func update_logistics(routes: int, tiles: int) -> void:
+	if is_instance_valid(logistics_label):
+		logistics_label.text = "FOERDERBAENDER %d | AKTIVE ROUTEN %d | +15%% VOID JE ROUTE" % [tiles, routes]

@@ -48,6 +48,7 @@ var data: float = 0.0
 var void_matter: float = 0.0
 var components: float = 0.0
 var components_produced: float = 0.0
+var logistics_routes: int = 0
 var instability: float = 0.0
 var core_health: float = 100.0
 var tech_level: int = 0
@@ -110,7 +111,7 @@ func tick(delta: float) -> void:
 		alloy -= units * 2.2
 		components = minf(MAX_RESOURCES, components + units)
 		components_produced = minf(MAX_RESOURCES, components_produced + units)
-	var harvesting_rate: float = float(machine_count("harvester")) * 0.028 * multiplier * (1.0 + float(synergies["stabilizer_harvester"]) * 0.3)
+	var harvesting_rate: float = float(machine_count("harvester")) * 0.028 * multiplier * (1.0 + float(synergies["stabilizer_harvester"]) * 0.3) * (1.0 + minf(0.75, float(logistics_routes) * 0.15))
 	var harvest_units: float = minf(harvesting_rate * delta, minf(components / 1.8, minf(data / 12.0, energy / 85.0)))
 	if harvest_units > 0.0:
 		components -= harvest_units * 1.8
@@ -260,6 +261,7 @@ func initiate_prestige() -> bool:
 	void_matter = 0.0
 	components = 0.0
 	components_produced = 0.0
+	logistics_routes = 0
 	instability = 0.0
 	core_health = 100.0
 	tech_level = 0
@@ -368,7 +370,7 @@ func claim_directive() -> bool:
 
 func to_save() -> Dictionary:
 	return {
-		"version": 4, "energy": energy, "alloy": alloy, "data": data,
+		"version": 5, "energy": energy, "alloy": alloy, "data": data,
 		"components": components, "components_produced": components_produced,
 		"void_matter": void_matter, "instability": instability, "core_health": core_health,
 		"tech_level": tech_level, "waves_survived": waves_survived,
@@ -379,7 +381,7 @@ func to_save() -> Dictionary:
 
 func restore(saved: Dictionary) -> bool:
 	var version: int = int(saved.get("version", -1))
-	if version != 1 and version != 2 and version != 3 and version != 4:
+	if version != 1 and version != 2 and version != 3 and version != 4 and version != 5:
 		return false
 	var keys: Array[String] = ["energy", "alloy", "data", "void_matter",
 		"instability", "core_health", "tech_level", "waves_survived", "lifetime_seconds"]

@@ -7,6 +7,9 @@ const PlayerScript = preload("res://scripts/player.gd")
 const EnemyScript = preload("res://scripts/threat.gd")
 const HudScript = preload("res://scripts/hud.gd")
 const GridScript = preload("res://scripts/power_grid.gd")
+const PlacementScript = preload("res://scripts/placement_rules.gd")
+const ConveyorScript = preload("res://scripts/conveyor_network.gd")
+const AudioScript = preload("res://scripts/procedural_audio.gd")
 const SAVE_PATH := "user://void_save.json"
 const SAVE_TEMP_PATH := "user://void_save.pending"
 const SAVE_LIMIT := 32768
@@ -15,6 +18,14 @@ var state: IndustryState
 var player: VoidOperator
 var hud: VoidHUD
 var pads: Array[Dictionary] = []
+var belt_cells: Array[Vector2i] = []
+var belt_visuals: Array[Node3D] = []
+var cargo_visuals: Array[Node3D] = []
+var belt_paths: Array = []
+var audio: VoidAudio
+var build_ghost: MeshInstance3D
+var conveyor_routes: int = 0
+var build_distance: float = 9.0
 var enemies: Array[AnomalyThreat] = []
 var animated_parts: Array[Node3D] = []
 var alarm_lights: Array[OmniLight3D] = []
@@ -50,6 +61,9 @@ func _ready() -> void:
 	player.respawned.connect(_on_respawn)
 	hud = HudScript.new()
 	add_child(hud)
+	audio = AudioScript.new()
+	add_child(audio)
+	_create_build_preview()
 	hud.announce("REAKTOR ONLINE. Folge den Auftraegen und baue deine Industrie aus.")
 	_refresh_hud()
 
@@ -92,11 +106,11 @@ func _create_world() -> void:
 	sun.light_color = Color(0.45, 0.67, 0.77)
 	sun.light_energy = 0.34
 	add_child(sun)
-	_box(Vector3(82, 0.9, 82), Vector3(0, -0.48, 0), mat_floor, true)
+	_box(Vector3(114, 0.9, 114), Vector3(0, -0.48, 0), mat_floor, true)
 	# Reinforced surrounding laboratory walls.
 	for side in [-1.0, 1.0]:
-		_box(Vector3(82, 12, 1.1), Vector3(0, 5.9, 40.3 * side), mat_dark, true)
-		_box(Vector3(1.1, 12, 82), Vector3(40.3 * side, 5.9, 0), mat_dark, true)
+		_box(Vector3(114, 12, 1.1), Vector3(0, 5.9, 56.3 * side), mat_dark, true)
+		_box(Vector3(1.1, 12, 114), Vector3(40.3 * side, 5.9, 0), mat_dark, true)
 	for grid_pos in range(-36, 37, 6):
 		_box(Vector3(0.09, 0.02, 78), Vector3(float(grid_pos), 0.015, 0), mat_steel)
 		_box(Vector3(78, 0.02, 0.09), Vector3(0, 0.018, float(grid_pos)), mat_steel)
@@ -139,11 +153,7 @@ func _create_world() -> void:
 		_pipe(ring_point + Vector3(0, 1.2, 0), ring_point + Vector3(0, 3.5, 0), 0.12, mat_steel)
 		_pipe(ring_point + Vector3(0, 1.5, 0), ring_point + Vector3(0, 3.3, 0), 0.045, mat_neon)
 	_light(Vector3(0, 4.9, 0), Color(0.13, 0.83, 1.0), 8.0, 20.0)
-	for i in range(18):
-		var angle: float = TAU * float(i) / 18.0
-		var distance: float = 11.8 + 6.8 * float(i % 2)
-		var spot := Vector3(cos(angle) * distance, 0, sin(angle) * distance)
-		_create_pad(spot)
+	# Free construction grid replaces the former fixed build platforms.
 	for i in range(18):
 		var angle: float = TAU * float(i) / 18.0
 		var distance: float = 26.0 + float(i % 3) * 2.0
@@ -296,6 +306,8 @@ func _build_machine(index: int, kind: String) -> void:
 func _process(delta: float) -> void:
 	var dt: float = minf(delta, 0.2)
 	world_time += dt
+	_update_preview()
+	_animate_conveyors(dt)
 	state.tick(dt)
 	wave_cooldown -= dt
 	confirm_prestige_seconds = maxf(0.0, confirm_prestige_seconds - dt)
@@ -323,6 +335,7 @@ func _process(delta: float) -> void:
 func _refresh_hud() -> void:
 	if is_instance_valid(hud) and is_instance_valid(player):
 		hud.refresh(state, player.health, selected_machine, enemies.size(), last_network_connections)
+		hud.update_logistics(conveyor_routes, belt_cells.size())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
@@ -340,6 +353,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_7: selected_machine = "fabricator"
 		KEY_8: selected_machine = "harvester"
 		KEY_J: _try_salvage()
+		KEY_K: _try_belt()
+		KEY_L: _try_remove_belt()
+		KEY_M:
+			if is_instance_valid(audio):
+				audio.toggle_audio()
 		KEY_E: _try_build()
 		KEY_F: state.research()
 		KEY_R: state.experiment()
@@ -357,50 +375,140 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_O: _load_game()
 	_refresh_hud()
 
-func _try_build() -> void:
-	var nearest: int = -1
-	var distance: float = 5.1
-	for i in range(pads.size()):
-		if pads[i]["kind"] != "":
-			continue
-		var p: Vector3 = pads[i]["position"]
-		var flat_player := Vector3(player.position.x, 0.0, player.position.z)
-		var d: float = p.distance_to(flat_player)
-		if d < distance:
-			distance = d
-			nearest = i
-	if nearest < 0:
-		hud.announce("Gehe zu einer freien, blau beleuchteten Bauplattform.")
+func _placement_point() -> Vector3:
+	var horizontal: Vector3 = -player.orbit.global_transform.basis.z
+	horizontal.y = 0.0
+	if horizontal.length_squared() < 0.001:
+		horizontal = Vector3.FORWARD
+	return PlacementScript.snap(player.global_position + horizontal.normalized() * build_distance)
+
+func _create_build_preview() -> void:
+	build_ghost = _box(Vector3(3.0, 0.10, 3.0), Vector3.ZERO, mat_neon)
+	build_ghost.name = "ConstructionPreview"
+
+func _update_preview() -> void:
+	if not is_instance_valid(build_ghost) or not is_instance_valid(player):
 		return
-	if state.buy_machine(selected_machine):
-		_build_machine(nearest, selected_machine)
-		_recalculate_power_grid()
-		if state.machine_count(selected_machine) < int(state.machines[selected_machine]):
-			hud.announce("ACHTUNG: Maschine ohne Energieanschluss! Baue Richtung Reaktorkern.")
+	var point: Vector3 = _placement_point()
+	build_ghost.position = point + Vector3(0, 0.13, 0)
+	build_ghost.visible = PlacementScript.machine_allowed(point, pads, belt_cells)
+
+func _try_build() -> void:
+	var point: Vector3 = _placement_point()
+	if not PlacementScript.machine_allowed(point, pads, belt_cells):
+		hud.announce("BAUFELD BLOCKIERT - mit Maus ausrichten und Abstand halten.")
+		return
+	if not state.can_build(selected_machine):
+		state.buy_machine(selected_machine)
+		return
+	var new_index: int = pads.size()
+	pads.append({"position": point, "kind": "", "machine_node": null})
+	if not state.buy_machine(selected_machine):
+		pads.pop_back()
+		return
+	_build_machine(new_index, selected_machine)
+	_recalculate_power_grid()
+	_refresh_conveyors()
+	audio.play_event("build")
+	if state.machine_count(selected_machine) < int(state.machines[selected_machine]):
+		hud.announce("KEIN STROMANSCHLUSS: Maschinen naeher aneinander bauen.")
 
 func _try_salvage() -> void:
 	var nearest: int = -1
 	var closest: float = 5.1
 	for i in range(pads.size()):
-		if str(pads[i]["kind"]) == "":
-			continue
 		var at: Vector3 = pads[i]["position"]
-		var distance: float = at.distance_to(Vector3(player.position.x, 0, player.position.z))
-		if distance < closest:
-			closest = distance
+		var dist: float = at.distance_to(Vector3(player.position.x, 0.0, player.position.z))
+		if dist < closest and str(pads[i]["kind"]) != "":
 			nearest = i
+			closest = dist
 	if nearest < 0:
-		hud.announce("Keine gebaute Maschine in Reichweite.")
+		hud.announce("Keine Maschine in Reichweite.")
 		return
 	var kind: String = str(pads[nearest]["kind"])
-	if state.salvage_machine(kind):
-		var node: Variant = pads[nearest]["machine_node"]
+	if not state.salvage_machine(kind):
+		return
+	var node: Variant = pads[nearest]["machine_node"]
+	if is_instance_valid(node):
+		node.queue_free()
+	pads.remove_at(nearest)
+	animated_parts = animated_parts.filter(func(part: Node3D) -> bool: return is_instance_valid(part) and not part.is_queued_for_deletion() and part.get_parent() != node)
+	_recalculate_power_grid()
+	_refresh_conveyors()
+	audio.play_event("build")
+
+func _try_belt() -> void:
+	var cell: Vector2i = PlacementScript.grid_cell(_placement_point())
+	if not PlacementScript.belt_allowed(cell, pads, belt_cells):
+		hud.announce("Foerderband blockiert.")
+		return
+	if state.tech_level < 2 or state.alloy < 7.0 or state.energy < 12.0:
+		hud.announce("FOERDERBAND: Forschung 2, 7 Legierung, 12 Energie.")
+		return
+	state.alloy -= 7.0
+	state.energy -= 12.0
+	belt_cells.append(cell)
+	_refresh_conveyors()
+	audio.play_event("belt")
+
+func _try_remove_belt() -> void:
+	var cell: Vector2i = PlacementScript.grid_cell(_placement_point())
+	if belt_cells.has(cell):
+		belt_cells.erase(cell)
+		_refresh_conveyors()
+		hud.announce("Foerderband entfernt.")
+
+func _clear_conveyors() -> void:
+	for node in belt_visuals:
 		if is_instance_valid(node):
 			node.queue_free()
-		pads[nearest]["machine_node"] = null
-		pads[nearest]["kind"] = ""
-		animated_parts = animated_parts.filter(func(part: Node3D) -> bool: return is_instance_valid(part) and not part.is_queued_for_deletion() and part.get_parent() != node)
-		_recalculate_power_grid()
+	for node in cargo_visuals:
+		if is_instance_valid(node):
+			node.queue_free()
+	belt_visuals.clear()
+	cargo_visuals.clear()
+	belt_paths.clear()
+	conveyor_routes = 0
+	state.logistics_routes = 0
+
+func _refresh_conveyors() -> void:
+	_clear_conveyors()
+	var power: Dictionary = GridScript.solve(pads)
+	var network: Dictionary = ConveyorScript.solve(pads, belt_cells, power["powered"])
+	belt_paths = network["paths"]
+	conveyor_routes = int(network["routes"])
+	state.logistics_routes = conveyor_routes
+	var active: Dictionary = {}
+	for path in belt_paths:
+		for cell in path:
+			active[cell] = true
+	for cell in belt_cells:
+		var pos: Vector3 = PlacementScript.position_for(cell)
+		var tile := Node3D.new()
+		tile.position = pos
+		add_child(tile)
+		belt_visuals.append(tile)
+		_box(Vector3(3.0, 0.20, 3.0), Vector3(0, 0.19, 0), mat_dark, false, tile)
+		_box(Vector3(2.5, 0.04, 0.22), Vector3(0, 0.31, 0), mat_neon if active.has(cell) else mat_amber, false, tile)
+	for path in belt_paths:
+		if path.size() == 0:
+			continue
+		var box_node := Node3D.new()
+		add_child(box_node)
+		var cargo := _box(Vector3(0.54, 0.50, 0.54), Vector3.ZERO, mat_amber, false, box_node)
+		cargo_visuals.append(box_node)
+
+func _animate_conveyors(_delta: float) -> void:
+	for i in range(mini(cargo_visuals.size(), belt_paths.size())):
+		var path: Array = belt_paths[i]
+		if path.is_empty():
+			continue
+		var time: float = fmod(world_time * 1.7 + float(i) * 0.41, float(path.size()))
+		var start_index: int = int(floor(time))
+		var target_index: int = (start_index + 1) % path.size()
+		var start: Vector3 = PlacementScript.position_for(path[start_index])
+		var finish: Vector3 = PlacementScript.position_for(path[target_index])
+		cargo_visuals[i].position = start.lerp(finish, time - floor(time)) + Vector3(0, 0.72, 0)
 
 func _try_elite_trial() -> void:
 	for threat in enemies:
@@ -424,6 +532,8 @@ func _try_prestige() -> void:
 	confirm_prestige_seconds = 0.0
 	if state.initiate_prestige():
 		_clear_factory()
+		belt_cells.clear()
+		_refresh_conveyors()
 		_recalculate_power_grid()
 		for e in enemies:
 			if is_instance_valid(e):
@@ -439,6 +549,7 @@ func _clear_factory() -> void:
 			old.queue_free()
 		pads[i]["machine_node"] = null
 		pads[i]["kind"] = ""
+	pads.clear()
 
 func _recalculate_power_grid() -> void:
 	for wire in power_cables:
@@ -473,6 +584,11 @@ func _recalculate_power_grid() -> void:
 func _on_status(message: String) -> void:
 	if is_instance_valid(hud):
 		hud.announce(message)
+		if is_instance_valid(audio):
+			if message.contains("FORSCH") or message.contains("TECHNOLOGIE"):
+				audio.play_event("research")
+			elif message.contains("ALARM") or message.contains("KRITISCH"):
+				audio.play_event("alarm")
 
 func _spawn_breach(amount: int, spawn_elite: bool = false) -> void:
 	for i in range(mini(amount, 12)):
@@ -559,10 +675,15 @@ func _spawn_beam(a: Vector3, b: Vector3, mat: Material) -> void:
 	)
 
 func _save_game() -> void:
-	var serialized_pads: Array[String] = []
+	var serialized: Array = []
 	for pad in pads:
-		serialized_pads.append(str(pad["kind"]))
-	var snapshot := {"version": 4, "state": state.to_save(), "pads": serialized_pads}
+		if str(pad["kind"]) != "":
+			var at: Vector3 = pad["position"]
+			serialized.append({"kind": str(pad["kind"]), "x": at.x, "z": at.z})
+	var belts_data: Array = []
+	for cell in belt_cells:
+		belts_data.append([cell.x, cell.y])
+	var snapshot := {"version": 5, "state": state.to_save(), "machines": serialized, "belts": belts_data}
 	var data_string: String = JSON.stringify(snapshot)
 	if data_string.length() > SAVE_LIMIT:
 		hud.announce("Spielstand zu gross. Speichern abgebrochen.")
@@ -611,16 +732,60 @@ func _load_game() -> void:
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
 	var save_version: float = float(raw_version)
-	if is_nan(save_version) or is_inf(save_version) or save_version != floor(save_version) or save_version < 1.0 or save_version > 4.0:
+	if is_nan(save_version) or is_inf(save_version) or save_version != floor(save_version) or save_version < 1.0 or save_version > 5.0:
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
-	var restored_pads: Variant = parsed.get("pads", [])
-	if typeof(restored_pads) != TYPE_ARRAY or restored_pads.size() != pads.size():
-		hud.announce("Spielstand hat ungueltige Bauplattformen.")
-		return
-	for kind in restored_pads:
-		if typeof(kind) != TYPE_STRING or (kind != "" and not IndustryState.MACHINES.has(kind)):
-			hud.announce("Spielstand enthaelt ungueltige Maschinen.")
+	var restored_machines: Array = []
+	var restored_belts: Array = []
+	if save_version < 5.0:
+		var old_pads: Variant = parsed.get("pads", [])
+		var old_positions: Array[Vector3] = _legacy_pad_positions()
+		if typeof(old_pads) != TYPE_ARRAY or old_pads.size() != old_positions.size():
+			hud.announce("Ungueltige alte Bauplattformen.")
+			return
+		for i in range(old_pads.size()):
+			if typeof(old_pads[i]) != TYPE_STRING:
+				hud.announce("Ungueltige alte Maschinen.")
+				return
+			if old_pads[i] != "":
+				restored_machines.append({"kind": old_pads[i], "position": old_positions[i]})
+	else:
+		var saved_machines: Variant = parsed.get("machines", [])
+		var saved_belts: Variant = parsed.get("belts", [])
+		if typeof(saved_machines) != TYPE_ARRAY or typeof(saved_belts) != TYPE_ARRAY:
+			hud.announce("Spielstand-Layout ungueltig.")
+			return
+		if saved_machines.size() > PlacementRules.MAX_MACHINES or saved_belts.size() > PlacementRules.MAX_BELTS:
+			hud.announce("Spielstand ueberschreitet Baugrenzen.")
+			return
+		for entry in saved_machines:
+			if typeof(entry) != TYPE_DICTIONARY:
+				hud.announce("Ungueltige Baukoordinaten.")
+				return
+			if typeof(entry.get("kind")) != TYPE_STRING or not IndustryState.MACHINES.has(entry["kind"]):
+				hud.announce("Ungueltige Maschine.")
+				return
+			var x: Variant = entry.get("x")
+			var z: Variant = entry.get("z")
+			if (typeof(x) != TYPE_INT and typeof(x) != TYPE_FLOAT) or (typeof(z) != TYPE_INT and typeof(z) != TYPE_FLOAT):
+				hud.announce("Ungueltige Position.")
+				return
+			var pos := Vector3(float(x), 0.0, float(z))
+			restored_machines.append({"kind": str(entry["kind"]), "position": pos})
+		for raw_cell in saved_belts:
+			if typeof(raw_cell) != TYPE_ARRAY or raw_cell.size() != 2:
+				hud.announce("Ungueltiges Foerderband.")
+				return
+			if (typeof(raw_cell[0]) != TYPE_FLOAT and typeof(raw_cell[0]) != TYPE_INT) or (typeof(raw_cell[1]) != TYPE_FLOAT and typeof(raw_cell[1]) != TYPE_INT):
+				hud.announce("Ungueltige Raster-Koordinaten.")
+				return
+			if absf(float(raw_cell[0])) > 100.0 or absf(float(raw_cell[1])) > 100.0:
+				return
+			if float(raw_cell[0]) != floor(float(raw_cell[0])) or float(raw_cell[1]) != floor(float(raw_cell[1])):
+				return
+			restored_belts.append(Vector2i(int(raw_cell[0]), int(raw_cell[1])))
+		if not PlacementRules.validate_layout(restored_machines, restored_belts):
+			hud.announce("Ungueltiges Fabriklayout.")
 			return
 	var snapshot: Variant = parsed.get("state", {})
 	if typeof(snapshot) != TYPE_DICTIONARY:
@@ -635,13 +800,12 @@ func _load_game() -> void:
 	var count_by_kind: Dictionary = {}
 	for kind in IndustryState.MACHINES:
 		count_by_kind[kind] = 0
-	for kind in restored_pads:
-		if kind == "":
-			continue
+	for entry in restored_machines:
+		var kind: String = entry["kind"]
 		count_by_kind[kind] = int(count_by_kind[kind]) + 1
 		if not IndustryState.UNLOCKS.has(kind) or level_number < int(IndustryState.UNLOCKS[kind]):
 			# Old alpha save files allowed the turret before research unlock.
-			if not (parsed.get("version") == 1 and kind == "turret"):
+			if not (save_version == 1.0 and kind == "turret"):
 				hud.announce("Spielstand enthaelt gesperrte Maschinen.")
 				return
 	if not state.restore(snapshot):
@@ -654,11 +818,24 @@ func _load_game() -> void:
 	_clear_factory()
 	for kind in IndustryState.MACHINES:
 		state.machines[kind] = 0
-	for i in range(pads.size()):
-		var kind: String = restored_pads[i]
-		if kind != "":
-			_build_machine(i, kind)
-			state.machines[kind] = int(state.machines[kind]) + 1
+	for entry in restored_machines:
+		var at: Vector3 = entry["position"]
+		var kind: String = entry["kind"]
+		pads.append({"position": at, "kind": "", "machine_node": null})
+		_build_machine(pads.size() - 1, kind)
+		state.machines[kind] = int(state.machines[kind]) + 1
+	belt_cells.clear()
+	for cell in restored_belts:
+		belt_cells.append(cell)
 	_recalculate_power_grid()
+	_refresh_conveyors()
 	hud.announce("LOKALER SPIELSTAND GELADEN.")
 	_refresh_hud()
+
+func _legacy_pad_positions() -> Array[Vector3]:
+	var positions: Array[Vector3] = []
+	for i in range(18):
+		var angle: float = TAU * float(i) / 18.0
+		var distance: float = 11.8 + 6.8 * float(i % 2)
+		positions.append(Vector3(cos(angle) * distance, 0.0, sin(angle) * distance))
+	return positions
