@@ -48,31 +48,50 @@ var lifetime_seconds: float = 0.0
 var charge: float = 0.0
 var overdrive_seconds: float = 0.0
 var directive_index: int = 0
+var prestige_cores: int = 0
+var power_grid_enabled: bool = false
+var powered_machines: Dictionary = {}
+var branches: Dictionary = {"energy": 0, "industry": 0, "containment": 0}
+const BRANCHES := ["energy", "industry", "containment"]
+const BRANCH_MAX_LEVEL: int = 3
 var machines: Dictionary = {
 	"generator": 0, "extractor": 0, "laboratory": 0,
 	"turret": 0, "capacitor": 0, "stabilizer": 0
 }
+
+func machine_count(kind: String) -> int:
+	if not MACHINES.has(kind):
+		return 0
+	if power_grid_enabled:
+		return int(powered_machines.get(kind, 0))
+	return int(machines.get(kind, 0))
+
+func configure_power_grid(counts: Dictionary) -> void:
+	power_grid_enabled = true
+	powered_machines.clear()
+	for kind in MACHINES:
+		powered_machines[kind] = mini(int(machines[kind]), maxi(0, int(counts.get(kind, 0))))
 
 func tick(delta: float) -> void:
 	if delta <= 0.0 or delta > 1.0:
 		return
 	lifetime_seconds += delta
 	var multiplier: float = get_multiplier()
-	energy = clampf(energy + ((3.5 + 5.0 * float(machines["generator"])) * multiplier - 0.9 * float(machines["laboratory"])) * delta, 0.0, MAX_RESOURCES)
-	alloy = clampf(alloy + (0.65 + 1.75 * float(machines["extractor"])) * multiplier * delta, 0.0, MAX_RESOURCES)
-	data = clampf(data + 0.9 * float(machines["laboratory"]) * multiplier * delta, 0.0, MAX_RESOURCES)
-	charge = clampf(charge + 1.9 * float(machines["capacitor"]) * delta, 0.0, 100.0)
-	var stabilizers: int = int(machines["stabilizer"])
+	energy = clampf(energy + ((3.5 + 5.0 * float(machine_count("generator"))) * multiplier - 0.9 * float(machine_count("laboratory"))) * delta, 0.0, MAX_RESOURCES)
+	alloy = clampf(alloy + (0.65 + 1.75 * float(machine_count("extractor"))) * multiplier * (1.0 + float(branches["industry"]) * 0.18) * delta, 0.0, MAX_RESOURCES)
+	data = clampf(data + 0.9 * float(machine_count("laboratory")) * multiplier * (1.0 + float(branches["industry"]) * 0.18) * delta, 0.0, MAX_RESOURCES)
+	charge = clampf(charge + 1.9 * float(machine_count("capacitor")) * delta, 0.0, 100.0)
+	var stabilizers: int = machine_count("stabilizer")
 	var base_cooling: float = 0.18
 	if stabilizers > 0 and energy > 2.0:
 		energy = maxf(0.0, energy - float(stabilizers) * 1.5 * delta)
 		base_cooling += 0.72 * float(stabilizers)
 		core_health = minf(100.0, core_health + float(stabilizers) * 0.48 * delta)
-	instability = maxf(0.0, instability - delta * base_cooling)
+	instability = maxf(0.0, instability - delta * (base_cooling + float(branches["containment"]) * 0.35))
 	overdrive_seconds = maxf(0.0, overdrive_seconds - delta)
 
 func get_multiplier() -> float:
-	var multiplier: float = 1.0 + float(tech_level) * 0.32
+	var multiplier: float = (1.0 + float(tech_level) * 0.32) * (1.0 + float(prestige_cores) * 0.15) * (1.0 + float(branches["energy"]) * 0.25)
 	if overdrive_seconds > 0.0:
 		multiplier *= 3.0
 	return multiplier
@@ -80,9 +99,9 @@ func get_multiplier() -> float:
 func get_production() -> Dictionary:
 	var mult: float = get_multiplier()
 	return {
-		"energy": (3.5 + 5.0 * float(machines["generator"])) * mult - 0.9 * float(machines["laboratory"]) - 1.5 * float(machines["stabilizer"]),
-		"alloy": (0.65 + 1.75 * float(machines["extractor"])) * mult,
-		"data": 0.9 * float(machines["laboratory"]) * mult
+		"energy": (3.5 + 5.0 * float(machine_count("generator"))) * mult - 0.9 * float(machine_count("laboratory")) - 1.5 * float(machine_count("stabilizer")),
+		"alloy": (0.65 + 1.75 * float(machine_count("extractor"))) * mult * (1.0 + float(branches["industry"]) * 0.18),
+		"data": 0.9 * float(machine_count("laboratory")) * mult * (1.0 + float(branches["industry"]) * 0.18)
 	}
 
 func is_unlocked(kind: String) -> bool:
@@ -142,6 +161,59 @@ func research() -> bool:
 	data -= float(price["data"])
 	tech_level += 1
 	status.emit("TECHNOLOGIE ENTDECKT: " + TECH_NAMES[tech_level] + " // +32% Produktion!")
+	return true
+
+func branch_cost(kind: String) -> Dictionary:
+	if not BRANCHES.has(kind):
+		return {}
+	var level: int = int(branches[kind])
+	return {"energy": 400.0 * pow(2.1, float(level)), "data": 55.0 * pow(2.0, float(level)), "alloy": 80.0 * pow(1.8, float(level)), "void": float(level)}
+
+func upgrade_branch(kind: String) -> bool:
+	if not BRANCHES.has(kind) or tech_level < 2:
+		status.emit("SPEZIALISIERUNG: Erst Forschungsstufe 2 erreichen.")
+		return false
+	if int(branches[kind]) >= BRANCH_MAX_LEVEL:
+		status.emit("Dieser Forschungszweig ist bereits vollstaendig.")
+		return false
+	var cost: Dictionary = branch_cost(kind)
+	if energy < float(cost["energy"]) or data < float(cost["data"]) or alloy < float(cost["alloy"]) or void_matter < float(cost["void"]):
+		status.emit("ZU WENIG RESSOURCEN: Spezialisierung " + kind.to_upper())
+		return false
+	energy -= float(cost["energy"])
+	data -= float(cost["data"])
+	alloy -= float(cost["alloy"])
+	void_matter -= float(cost["void"])
+	branches[kind] = int(branches[kind]) + 1
+	status.emit("SPEZIALISIERUNG ERFORSCHT: " + kind.to_upper() + " STUFE " + str(branches[kind]))
+	return true
+
+func prestige_eligible() -> bool:
+	return tech_level >= 5 and void_matter >= 8.0 and data >= 800.0 and energy >= 3500.0
+
+func initiate_prestige() -> bool:
+	if not prestige_eligible():
+		status.emit("SINGULARITAET: 5 Forschung, 8 VOID, 800 Daten, 3500 Energie erforderlich.")
+		return false
+	prestige_cores = mini(prestige_cores + 1 + (tech_level - 5), 100)
+	var persistent: int = prestige_cores
+	energy = 90.0 + float(persistent * 12)
+	alloy = 40.0 + float(persistent * 4)
+	data = 0.0
+	void_matter = 0.0
+	instability = 0.0
+	core_health = 100.0
+	tech_level = 0
+	waves_survived = 0
+	charge = 0.0
+	overdrive_seconds = 0.0
+	directive_index = 0
+	for kind in MACHINES:
+		machines[kind] = 0
+		powered_machines[kind] = 0
+	for kind in BRANCHES:
+		branches[kind] = 0
+	status.emit("SINGULARITAET ABGESCHLOSSEN: %d bleibende Kerne, +%d%% Produktion." % [persistent, persistent * 15])
 	return true
 
 func pulse() -> bool:
@@ -236,20 +308,21 @@ func claim_directive() -> bool:
 
 func to_save() -> Dictionary:
 	return {
-		"version": 2, "energy": energy, "alloy": alloy, "data": data,
+		"version": 3, "energy": energy, "alloy": alloy, "data": data,
 		"void_matter": void_matter, "instability": instability, "core_health": core_health,
 		"tech_level": tech_level, "waves_survived": waves_survived,
 		"lifetime_seconds": lifetime_seconds, "charge": charge,
-		"overdrive_seconds": overdrive_seconds, "directive_index": directive_index
+		"overdrive_seconds": overdrive_seconds, "directive_index": directive_index,
+		"prestige_cores": prestige_cores, "branches": branches.duplicate(true)
 	}
 
 func restore(saved: Dictionary) -> bool:
 	var version: int = int(saved.get("version", -1))
-	if version != 1 and version != 2:
+	if version != 1 and version != 2 and version != 3:
 		return false
 	var keys: Array[String] = ["energy", "alloy", "data", "void_matter",
 		"instability", "core_health", "tech_level", "waves_survived", "lifetime_seconds"]
-	if version == 2:
+	if version >= 2:
 		keys.append_array(["charge", "overdrive_seconds", "directive_index"])
 	for key in keys:
 		if not saved.has(key) or (typeof(saved[key]) != TYPE_FLOAT and typeof(saved[key]) != TYPE_INT):
@@ -259,9 +332,24 @@ func restore(saved: Dictionary) -> bool:
 			return false
 	if int(saved["tech_level"]) > MAX_LEVEL or int(saved["waves_survived"]) > 1000000:
 		return false
-	if version == 2 and (int(saved["directive_index"]) > DIRECTIVES.size()
+	if version >= 2 and (int(saved["directive_index"]) > DIRECTIVES.size()
 			or float(saved["charge"]) > 100.0 or float(saved["overdrive_seconds"]) > 25.0):
 		return false
+	if version >= 3:
+		if not saved.has("prestige_cores") or typeof(saved["prestige_cores"]) != TYPE_INT:
+			return false
+		if int(saved["prestige_cores"]) < 0 or int(saved["prestige_cores"]) > 100:
+			return false
+		var saved_branches: Variant = saved.get("branches", {})
+		if typeof(saved_branches) != TYPE_DICTIONARY:
+			return false
+		for kind in BRANCHES:
+			if not saved_branches.has(kind) or typeof(saved_branches[kind]) != TYPE_INT:
+				return false
+			if int(saved_branches[kind]) < 0 or int(saved_branches[kind]) > BRANCH_MAX_LEVEL:
+				return false
+			if int(saved_branches[kind]) > 0 and int(saved["tech_level"]) < 2:
+				return false
 	energy = float(saved["energy"])
 	alloy = float(saved["alloy"])
 	data = float(saved["data"])
@@ -274,4 +362,8 @@ func restore(saved: Dictionary) -> bool:
 	charge = float(saved.get("charge", 0.0))
 	overdrive_seconds = float(saved.get("overdrive_seconds", 0.0))
 	directive_index = int(saved.get("directive_index", 0))
+	prestige_cores = int(saved.get("prestige_cores", 0))
+	var restored_branches: Dictionary = saved.get("branches", {})
+	for kind in BRANCHES:
+		branches[kind] = int(restored_branches.get(kind, 0))
 	return true
