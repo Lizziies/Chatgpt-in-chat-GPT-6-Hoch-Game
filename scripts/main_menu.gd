@@ -53,6 +53,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if mode == "playing":
 			show_pause()
+		elif mode == "victory":
+			resume_requested.emit()
 		elif mode == "pause":
 			resume_requested.emit()
 		elif mode == "settings":
@@ -82,6 +84,13 @@ func resume() -> void:
 	visible = false
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func show_victory() -> void:
+	mode = "victory"
+	visible = true
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_render()
 
 func show_notice(message: String) -> void:
 	if is_instance_valid(notice):
@@ -141,6 +150,14 @@ func _render() -> void:
 				_render())
 			_button("ZUM TITELBILDSCHIRM", func() -> void: title_requested.emit())
 			_button("BEENDEN (OHNE AUTO-SAVE)", func() -> void: get_tree().quit())
+		"victory":
+			_label("KAMPAGNE ABGESCHLOSSEN", 25, Color(0.95, 0.77, 0.42))
+			_label("SINGULARITAET VERSIEGELT", 20, Color(0.45, 0.95, 0.96))
+			_label("Du hast die Anlage zurueckerobert, die Industrie stabilisiert und die letzte Anomalie versiegelt.", 17, Color(0.89, 0.94, 0.99))
+			_label("Deine Maschinen und permanenten Prestige-Kerne bleiben erhalten. Du kannst die freie Fabrik weiter ausbauen.", 15, Color(0.80, 0.89, 0.96))
+			_button("SANDBOX WEITERSPIELEN", func() -> void: resume_requested.emit())
+			_button("MANUELL SPEICHERN", func() -> void: save_requested.emit())
+			_button("ZUM TITELBILDSCHIRM", func() -> void: title_requested.emit())
 		"settings":
 			_label("EINSTELLUNGEN – nur fuer diese Sitzung", 20, Color(0.89, 0.96, 0.98))
 			_label("Mausempfindlichkeit", 15, Color(0.80, 0.87, 0.93))
