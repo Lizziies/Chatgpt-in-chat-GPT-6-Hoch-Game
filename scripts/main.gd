@@ -15,6 +15,7 @@ var hud: VoidHUD
 var pads: Array[Dictionary] = []
 var enemies: Array[AnomalyThreat] = []
 var animated_parts: Array[Node3D] = []
+var alarm_lights: Array[OmniLight3D] = []
 var selected_machine: String = "generator"
 var ui_timer: float = 0.0
 var attack_timer: float = 0.0
@@ -98,6 +99,28 @@ func _create_world() -> void:
 			_box(Vector3(0.85, 10.5, 1.25), Vector3(side * 39.0, 5.0, float(z)), mat_steel)
 	for x in range(-30, 31, 15):
 		_box(Vector3(0.6, 0.9, 79), Vector3(float(x), 10.5, 0), mat_steel)
+	# Ventilation, conduits and small illuminated warning panels.
+	for side in [-1.0, 1.0]:
+		for height in [3.5, 8.1]:
+			_pipe(Vector3(side * 38.4, height, -37), Vector3(side * 38.4, height, 37), 0.19, mat_steel)
+			_pipe(Vector3(-37, height, side * 38.4), Vector3(37, height, side * 38.4), 0.14, mat_steel)
+	for i in range(16):
+		var z: float = -34.0 + 4.55 * float(i)
+		_box(Vector3(0.12, 0.12, 1.6), Vector3(39.45, 3.9, z), mat_amber)
+		_box(Vector3(0.12, 0.12, 1.6), Vector3(-39.45, 3.9, z), mat_amber)
+	for i in range(4):
+		var angle: float = TAU * float(i) / 4.0
+		var pos := Vector3(cos(angle) * 34.0, 6.8, sin(angle) * 34.0)
+		var beacon := OmniLight3D.new()
+		beacon.name = "AlertBeacon_%d" % i
+		beacon.position = pos
+		beacon.light_color = Color(1.0, 0.08, 0.055)
+		beacon.light_energy = 0.0
+		beacon.omni_range = 15.0
+		beacon.shadow_enabled = false
+		add_child(beacon)
+		alarm_lights.append(beacon)
+		_box(Vector3(0.65, 0.4, 0.65), pos, mat_red)
 	# Reactor shell, column, protected glass and spinning stabilizers.
 	_cylinder(Vector3(0, 0.7, 0), 3.15, 1.4, mat_dark, true)
 	_cylinder(Vector3(0, 1.7, 0), 1.25, 3.8, mat_neon)
@@ -259,6 +282,10 @@ func _process(delta: float) -> void:
 	var dt: float = minf(delta, 0.2)
 	world_time += dt
 	state.tick(dt)
+	var under_alarm: bool = not enemies.is_empty() or state.instability > 55.0
+	var flash: float = 1.1 + 1.4 * absf(sin(world_time * 5.0)) if under_alarm else 0.0
+	for beacon in alarm_lights:
+		beacon.light_energy = flash
 	for part in animated_parts:
 		if is_instance_valid(part):
 			part.rotate_y(dt * 0.8)
