@@ -3,7 +3,7 @@
 Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten Experimenten, begehbarer Fabrik und gelegentlichen Kämpfen. **Open Source – MIT-Lizenz.**
 
 ## Status
-**Frühe spielbare Alpha / Vertical Slice.** Keine vollständige kommerzielle Veröffentlichung. Der Fokus liegt auf dem spielbaren Kernsystem.
+**Version 0.2 – Spielbare Pre-Alpha.** Neue Aufträge, echte Freischaltungen, sechs Maschinen, reaktive Alarmbeleuchtung und weitere Produktionstiefe. Das Spiel ist noch lange nicht fertig oder kommerziell getestet.
 
 ## Datenschutz als Architekturprinzip
 - Kein Account, keine Werbung, keine Online-Schnittstellen, kein HTTP, keine Telemetrie.
@@ -35,24 +35,41 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | Leertaste | Springen |
 | Tab | Taktische Kamera ein/aus |
 | 1 / 2 / 3 / 4 | Generator / Extraktor / Labor / Turm auswählen |
+| 5 / 6 | Kondensator / Stabilisator wählen (Forschung nötig) |
 | E | Maschine auf der nächsten freien Bauplattform errichten |
 | F | Forschung kaufen |
 | R | Riskantes Experiment starten |
+| G | Teureres, risikoärmeres Experiment |
+| C | Netz-Puls (bei 100 Kondensator-Ladung: 25s dreifache Produktion) |
+| Q | Erledigten Auftrag einlösen |
 | Linksklick | Energieblaster |
 | Esc | Maus freigeben; Linksklick im Spielfeld zum Einfangen |
 | P / O | Spiel manuell speichern / laden |
 
 ## Grundschleife
-Ressourcen erzeugen → Maschinen aufbauen → Forschung betreiben → experimentelle Technologie riskieren → Anomalien und Angriffe überstehen → weitere Technologie freischalten. Die Produktion läuft weiter, wenn du kämpfst.
+Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschinen freischalten → Aufträge erfüllen und Belohnungen abholen → riskante oder stabilisierte Experimente durchführen → Anomalien abwehren → Produktionsboost nutzen. Die Produktion läuft beim Kämpfen weiter.
+
+### Neue Systeme in Version 0.2
+- **8 Direktiven:** konkrete Ziele, sichtbarer Fortschritt und optionale Belohnungen; `Q` holt fertige Aufträge ab.
+- **Kondensator (Stufe 1):** erzeugt Netz-Ladung; mit `C` startet ein 25-Sekunden-Overdrive mit 3× Produktion.
+- **Stabilisator (Stufe 2):** verbraucht Energie, kühlt den Reaktor und repariert ihn langsam.
+- **7 Forschungsstufen:** schalten Turm, Kondensator und Stabilisator frei und steigern die Produktion.
+- **Zwei Experimentprotokolle:** `R` spart Ressourcen, ist gefährlicher; `G` kostet mehr, reduziert das Risiko.
+- **Industrie-Atmosphäre:** ergänzte Leitungen, Warnmarkierungen und bei Gefahr pulsierende Alarmbeleuchtung.
+- **Speicherformat v2:** manuelles lokales Speichern (`P`) und Laden (`O`); Spielstände aus v1 werden weiterhin gelesen.
+
+### Spielstandsicherheit
+Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschinen geprüft. Nur das feste Godot-`user://`-Spielstandsverzeichnis wird verwendet. Spielstände werden **nicht** automatisch hochgeladen; es gibt keinen Cloud-Sync. Kein automatisches Speichern. Bei Absturz unmittelbar beim Speichern ist eine Beschädigung möglich – Backups sind für eine spätere Version geplant.
 
 ## Roadmap
 - [x] GitHub-Projekt & Lizenz
 - [x] 3D-Welt, Spieler, frei drehbare Kamera
 - [x] Maschinen, Ressourcensimulation, Forschung
+- [x] Aufträge, Produktionsboost, Kondensatoren, Stabilisatoren, risikoärmere Experimente
 - [x] Experimente, Bedrohungen, einfache Kämpfe
 - [x] Freiwilliges lokales Save/Load
 - [x] Windows-Build-Pipeline und grundlegende Tests
-- [ ] 3D-Modelle, Animationspakete, Sounddesign
-- [ ] Produktionsketten, riesiger Forschungsbaum, Prestige
+- [ ] Hochwertige 3D-Modelle, Charakteranimationen, Sounddesign, optimierte PBR-Materialien
+- [ ] Physische Produktionsketten, verzweigter Forschungsbaum, Prestige
 - [ ] Barrierefreiheit, Controller, Übersetzungen
 - [ ] Spielbalance, Langzeittests, Steam-Release
