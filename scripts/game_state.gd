@@ -7,18 +7,21 @@ signal breach_requested(amount: int)
 
 const MAX_RESOURCES: float = 1.0e12
 const MAX_LEVEL: int = 7
-const MACHINES: Array[String] = ["generator", "extractor", "laboratory", "turret", "capacitor", "stabilizer"]
+const MACHINES: Array[String] = ["generator", "extractor", "laboratory", "turret", "capacitor", "stabilizer", "fabricator", "harvester"]
 const COSTS := {
 	"generator": {"energy": 45.0, "alloy": 12.0, "data": 0.0},
 	"extractor": {"energy": 65.0, "alloy": 15.0, "data": 0.0},
 	"laboratory": {"energy": 90.0, "alloy": 32.0, "data": 0.0},
 	"turret": {"energy": 135.0, "alloy": 40.0, "data": 10.0},
 	"capacitor": {"energy": 220.0, "alloy": 62.0, "data": 14.0},
-	"stabilizer": {"energy": 420.0, "alloy": 110.0, "data": 42.0}
+	"stabilizer": {"energy": 420.0, "alloy": 110.0, "data": 42.0},
+	"fabricator": {"energy": 700.0, "alloy": 150.0, "data": 80.0, "components": 0.0},
+	"harvester": {"energy": 1600.0, "alloy": 350.0, "data": 200.0, "components": 75.0}
 }
 const UNLOCKS := {
 	"generator": 0, "extractor": 0, "laboratory": 0,
-	"turret": 1, "capacitor": 1, "stabilizer": 2
+	"turret": 1, "capacitor": 1, "stabilizer": 2,
+	"fabricator": 3, "harvester": 4
 }
 const TECH_NAMES := [
 	"Grundversorgung", "Sicherheitsprotokolle", "Anomalie-Kontrolle",
@@ -33,13 +36,18 @@ const DIRECTIVES := [
 	{"title": "Jenseits der Grenze", "hint": "Sammle 1 VOID-Materie", "type": "void", "target": 1, "energy": 300.0, "alloy": 80.0, "data": 25.0, "void": 0.0},
 	{"title": "Dauerbetrieb", "hint": "Errichte insgesamt 5 Maschinen", "type": "total", "target": 5, "energy": 430.0, "alloy": 110.0, "data": 32.0, "void": 0.0},
 	{"title": "Anomalie-Abwehr", "hint": "Besiege 5 Kreaturen", "type": "kills", "target": 5, "energy": 360.0, "alloy": 100.0, "data": 40.0, "void": 2.0},
-	{"title": "Singularitaetswerk", "hint": "Erreiche Forschungsstufe 4", "type": "tech", "target": 4, "energy": 1800.0, "alloy": 700.0, "data": 250.0, "void": 3.0}
+	{"title": "Singularitaetswerk", "hint": "Erreiche Forschungsstufe 4", "type": "tech", "target": 4, "energy": 1800.0, "alloy": 700.0, "data": 250.0, "void": 3.0},
+	{"title": "Industrieller Umbruch", "hint": "Baue 1 Fabrikator", "type": "machine", "kind": "fabricator", "target": 1, "energy": 700.0, "alloy": 200.0, "data": 100.0, "void": 0.0},
+	{"title": "Erste Bauteile", "hint": "Produziere insgesamt 25 Bauteile", "type": "components_total", "target": 25, "energy": 1100.0, "alloy": 280.0, "data": 130.0, "void": 1.0},
+	{"title": "Jenseits des Kerns", "hint": "Baue 1 Anomalie-Harvester", "type": "machine", "kind": "harvester", "target": 1, "energy": 1200.0, "alloy": 200.0, "data": 180.0, "void": 3.0}
 ]
 
 var energy: float = 90.0
 var alloy: float = 40.0
 var data: float = 0.0
 var void_matter: float = 0.0
+var components: float = 0.0
+var components_produced: float = 0.0
 var instability: float = 0.0
 var core_health: float = 100.0
 var tech_level: int = 0
@@ -51,13 +59,14 @@ var directive_index: int = 0
 var prestige_cores: int = 0
 var power_grid_enabled: bool = false
 var powered_machines: Dictionary = {}
-var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0}
+var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0, "extractor_fabricator": 0, "stabilizer_harvester": 0}
 var branches: Dictionary = {"energy": 0, "industry": 0, "containment": 0}
 const BRANCHES := ["energy", "industry", "containment"]
 const BRANCH_MAX_LEVEL: int = 3
 var machines: Dictionary = {
 	"generator": 0, "extractor": 0, "laboratory": 0,
-	"turret": 0, "capacitor": 0, "stabilizer": 0
+	"turret": 0, "capacitor": 0, "stabilizer": 0,
+	"fabricator": 0, "harvester": 0
 }
 
 func machine_count(kind: String) -> int:
@@ -90,7 +99,25 @@ func tick(delta: float) -> void:
 		energy = maxf(0.0, energy - float(stabilizers) * 1.5 * delta)
 		base_cooling += 0.72 * float(stabilizers)
 		core_health = minf(100.0, core_health + float(stabilizers) * 0.48 * delta)
+
 	instability = maxf(0.0, instability - delta * (base_cooling + float(branches["containment"]) * 0.35))
+	# Two-stage processing. Input shortages scale output instead of making balances negative.
+	# Factories operate only while attached to the physical power network.
+	var fabricator_rate: float = float(machine_count("fabricator")) * 0.72 * multiplier * (1.0 + float(synergies["extractor_fabricator"]) * 0.25)
+	var units: float = minf(fabricator_rate * delta, minf(energy / 5.0, alloy / 2.2))
+	if units > 0.0:
+		energy -= units * 5.0
+		alloy -= units * 2.2
+		components = minf(MAX_RESOURCES, components + units)
+		components_produced = minf(MAX_RESOURCES, components_produced + units)
+	var harvesting_rate: float = float(machine_count("harvester")) * 0.028 * multiplier * (1.0 + float(synergies["stabilizer_harvester"]) * 0.3)
+	var harvest_units: float = minf(harvesting_rate * delta, minf(components / 1.8, minf(data / 12.0, energy / 85.0)))
+	if harvest_units > 0.0:
+		components -= harvest_units * 1.8
+		data -= harvest_units * 12.0
+		energy -= harvest_units * 85.0
+		void_matter = minf(MAX_RESOURCES, void_matter + harvest_units)
+		instability = minf(100.0, instability + harvest_units * 0.9)
 	overdrive_seconds = maxf(0.0, overdrive_seconds - delta)
 
 func get_multiplier() -> float:
@@ -104,7 +131,9 @@ func get_production() -> Dictionary:
 	return {
 		"energy": (3.5 + 5.0 * float(machine_count("generator"))) * mult - 0.9 * float(machine_count("laboratory")) - 1.5 * float(machine_count("stabilizer")),
 		"alloy": (0.65 + 1.75 * float(machine_count("extractor"))) * mult * (1.0 + float(branches["industry"]) * 0.18),
-		"data": 0.9 * float(machine_count("laboratory")) * mult * (1.0 + float(branches["industry"]) * 0.18) * (1.0 + float(synergies["lab_extractor"]) * 0.22)
+		"data": 0.9 * float(machine_count("laboratory")) * mult * (1.0 + float(branches["industry"]) * 0.18) * (1.0 + float(synergies["lab_extractor"]) * 0.22),
+		"components": float(machine_count("fabricator")) * 0.72 * mult * (1.0 + float(synergies["extractor_fabricator"]) * 0.25),
+		"void": float(machine_count("harvester")) * 0.028 * mult * (1.0 + float(synergies["stabilizer_harvester"]) * 0.3)
 	}
 
 func is_unlocked(kind: String) -> bool:
@@ -119,14 +148,15 @@ func get_cost(kind: String) -> Dictionary:
 	return {
 		"energy": ceil(float(base["energy"]) * scale),
 		"alloy": ceil(float(base["alloy"]) * scale),
-		"data": ceil(float(base["data"]) * scale)
+		"data": ceil(float(base["data"]) * scale),
+		"components": ceil(float(base.get("components", 0.0)) * scale)
 	}
 
 func can_build(kind: String) -> bool:
 	if not is_unlocked(kind):
 		return false
 	var price: Dictionary = get_cost(kind)
-	return energy >= float(price["energy"]) and alloy >= float(price["alloy"]) and data >= float(price["data"])
+	return energy >= float(price["energy"]) and alloy >= float(price["alloy"]) and data >= float(price["data"]) and components >= float(price["components"])
 
 func buy_machine(kind: String) -> bool:
 	if not is_unlocked(kind):
@@ -139,8 +169,22 @@ func buy_machine(kind: String) -> bool:
 	energy -= float(price["energy"])
 	alloy -= float(price["alloy"])
 	data -= float(price["data"])
+	components -= float(price["components"])
 	machines[kind] = int(machines[kind]) + 1
 	status.emit("MASCHINE ONLINE: " + kind.to_upper())
+	return true
+
+func salvage_machine(kind: String) -> bool:
+	# Manual deconstruction only. 40% of the next-lower scaled build cost is returned.
+	if not MACHINES.has(kind) or int(machines[kind]) <= 0:
+		return false
+	machines[kind] = int(machines[kind]) - 1
+	var refund: Dictionary = get_cost(kind)
+	energy = minf(MAX_RESOURCES, energy + floor(float(refund["energy"]) * 0.40))
+	alloy = minf(MAX_RESOURCES, alloy + floor(float(refund["alloy"]) * 0.40))
+	data = minf(MAX_RESOURCES, data + floor(float(refund["data"]) * 0.40))
+	components = minf(MAX_RESOURCES, components + floor(float(refund["components"]) * 0.40))
+	status.emit("MASCHINE DEMONTIERT: 40% Materialwert zurueckerhalten.")
 	return true
 
 func research_cost() -> Dictionary:
@@ -214,6 +258,8 @@ func initiate_prestige() -> bool:
 	alloy = 40.0 + float(persistent * 4)
 	data = 0.0
 	void_matter = 0.0
+	components = 0.0
+	components_produced = 0.0
 	instability = 0.0
 	core_health = 100.0
 	tech_level = 0
@@ -301,6 +347,7 @@ func directive_progress() -> int:
 				result += int(machines[kind])
 			return result
 		"kills": return waves_survived
+		"components_total": return int(components_produced)
 	return 0
 
 func claim_directive() -> bool:
@@ -321,7 +368,8 @@ func claim_directive() -> bool:
 
 func to_save() -> Dictionary:
 	return {
-		"version": 3, "energy": energy, "alloy": alloy, "data": data,
+		"version": 4, "energy": energy, "alloy": alloy, "data": data,
+		"components": components, "components_produced": components_produced,
 		"void_matter": void_matter, "instability": instability, "core_health": core_health,
 		"tech_level": tech_level, "waves_survived": waves_survived,
 		"lifetime_seconds": lifetime_seconds, "charge": charge,
@@ -331,12 +379,14 @@ func to_save() -> Dictionary:
 
 func restore(saved: Dictionary) -> bool:
 	var version: int = int(saved.get("version", -1))
-	if version != 1 and version != 2 and version != 3:
+	if version != 1 and version != 2 and version != 3 and version != 4:
 		return false
 	var keys: Array[String] = ["energy", "alloy", "data", "void_matter",
 		"instability", "core_health", "tech_level", "waves_survived", "lifetime_seconds"]
 	if version >= 2:
 		keys.append_array(["charge", "overdrive_seconds", "directive_index"])
+	if version >= 4:
+		keys.append_array(["components", "components_produced"])
 	for key in keys:
 		if not saved.has(key) or (typeof(saved[key]) != TYPE_FLOAT and typeof(saved[key]) != TYPE_INT):
 			return false
@@ -365,10 +415,14 @@ func restore(saved: Dictionary) -> bool:
 				return false
 			if int(saved_branches[kind]) > 0 and int(saved["tech_level"]) < 2:
 				return false
+	if version >= 4 and float(saved["components_produced"]) < float(saved["components"]):
+		return false
 	energy = float(saved["energy"])
 	alloy = float(saved["alloy"])
 	data = float(saved["data"])
 	void_matter = float(saved["void_matter"])
+	components = float(saved.get("components", 0.0))
+	components_produced = float(saved.get("components_produced", 0.0))
 	instability = clampf(float(saved["instability"]), 0.0, 100.0)
 	core_health = clampf(float(saved["core_health"]), 1.0, 100.0)
 	tech_level = int(saved["tech_level"])
