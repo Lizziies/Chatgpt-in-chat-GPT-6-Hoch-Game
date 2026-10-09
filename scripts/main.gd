@@ -606,7 +606,12 @@ func _load_game() -> void:
 		hud.announce("Ungueltiger Spielstand.")
 		return
 	var parsed: Dictionary = document
-	if not [1, 2, 3, 4].has(parsed.get("version", -1)):
+	var raw_version: Variant = parsed.get("version", -1)
+	if typeof(raw_version) != TYPE_INT and typeof(raw_version) != TYPE_FLOAT:
+		hud.announce("Unbekannte Spielstand-Version.")
+		return
+	var save_version: float = float(raw_version)
+	if is_nan(save_version) or is_inf(save_version) or save_version != floor(save_version) or save_version < 1.0 or save_version > 4.0:
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
 	var restored_pads: Variant = parsed.get("pads", [])
