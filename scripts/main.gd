@@ -591,6 +591,7 @@ func _complete_campaign() -> void:
 		return
 	audio.play_event("prestige")
 	hud.announce("SIEG! SINGULARITAET EINGEDAEMMT. Du kannst deine Industrie weiterfuehren.")
+	menu.show_victory()
 	_refresh_hud()
 
 func _try_elite_trial() -> void:
