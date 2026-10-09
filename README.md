@@ -54,6 +54,9 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | Esc | Maus freigeben; Linksklick im Spielfeld zum Einfangen |
 | P / O | Spiel manuell speichern / laden |
 
+## Kampagnenende
+Das Spiel hat nun eine endliche erste Hauptkampagne: Erreiche Forschung 7, verdiene durch Prestige mindestens 2 dauerhafte Kerne, sammle 25 VOID-Materie, 250 Bauteile und 2500 Forschungsdaten und halte den Reaktor über 75 % Integrität. Mit **N** versiegelst du die Singularität und erreichst den Kampagnenabschluss; die Industrie bleibt als Sandbox spielbar. Dieses Ende ersetzt noch keine ausgearbeitete Handlung oder professionelle Präsentation.
+
 ## Grundschleife
 Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschinen freischalten → Aufträge erfüllen und Belohnungen abholen → riskante oder stabilisierte Experimente durchführen → Anomalien abwehren → Produktionsboost nutzen. Die Produktion läuft beim Kämpfen weiter.
 

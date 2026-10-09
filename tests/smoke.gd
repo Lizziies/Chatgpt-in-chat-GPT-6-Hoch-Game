@@ -251,6 +251,21 @@ func _execute() -> void:
 	legacy_v4["version"] = 4
 	_check(chain.restore(legacy_v4), "v4 restore migration")
 
+	# The player has a reachable campaign ending without losing the sandbox.
+	var finale: IndustryState = IndustryScript.new()
+	root.add_child(finale)
+	_check(not finale.complete_campaign(), "campaign cannot end immediately")
+	finale.tech_level = 7
+	finale.prestige_cores = 2
+	finale.void_matter = 25.0
+	finale.components = 250.0
+	finale.components_produced = 250.0
+	finale.data = 2500.0
+	_check(finale.final_objective_ready(), "campaign completion prerequisites")
+	_check(finale.complete_campaign(), "single-player campaign ends")
+	_check(finale.campaign_complete, "campaign completion stored")
+	_check(not finale.complete_campaign(), "completion cannot be farmed")
+	_check(finale.restore(JSON.parse_string(JSON.stringify(finale.to_save()))), "campaign victory survives manual save")
 	if failures == 0:
 		print("SMOKE_TEST_PASS: %d assertions" % assertions)
 	else:

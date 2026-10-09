@@ -94,6 +94,8 @@ func _start_new_game() -> void:
 		state.components_produced = 0.0
 		state.tech_level = 0
 		state.prestige_cores = 0
+		state.campaign_complete = false
+		state.singularity_record = 0
 		state.waves_survived = 0
 		state.directive_index = 0
 		state.charge = 0.0
@@ -442,6 +444,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_V: state.upgrade_branch("containment")
 		KEY_B: _try_prestige()
 		KEY_Y: _try_elite_trial()
+		KEY_N: _complete_campaign()
 		KEY_H: hud.toggle_help()
 		KEY_T: state.repair_core()
 		KEY_P: _save_game()
@@ -582,6 +585,13 @@ func _animate_conveyors(_delta: float) -> void:
 		var start: Vector3 = PlacementScript.position_for(path[start_index])
 		var finish: Vector3 = PlacementScript.position_for(path[target_index])
 		cargo_visuals[i].position = start.lerp(finish, time - floor(time)) + Vector3(0, 0.72, 0)
+
+func _complete_campaign() -> void:
+	if not state.complete_campaign():
+		return
+	audio.play_event("prestige")
+	hud.announce("SIEG! SINGULARITAET EINGEDAEMMT. Du kannst deine Industrie weiterfuehren.")
+	_refresh_hud()
 
 func _try_elite_trial() -> void:
 	for threat in enemies:

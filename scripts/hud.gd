@@ -53,7 +53,7 @@ func _ready() -> void:
 	_label(power_box, "REAKTOR // ENERGIE-NETZWERK", 14, Color(0.45, 0.93, 0.94))
 	power_label = _label(power_box, "", 13, Color(0.90, 0.92, 0.97))
 	logistics_label = _label(power_box, "", 12, Color(0.86, 0.65, 0.45))
-	var upgrade_panel := _panel(root, Vector2(-398, 380), Vector2(378, 215), true)
+	var upgrade_panel := _panel(root, Vector2(-398, 380), Vector2(378, 240), true)
 	var upgrade_box := _column(upgrade_panel)
 	_label(upgrade_box, "FORSCHUNGSZWEIGE // AB STUFE 2", 14, Color(0.45, 0.93, 0.94))
 	specialty_label = _label(upgrade_box, "", 13, Color(0.90, 0.92, 0.97))
@@ -157,8 +157,9 @@ func refresh(state: IndustryState, player_health: float, selected: String, enemy
 	specialty_label.text = "Z ENERGIE        St. %d/3   (+25%% je Stufe)\nX INDUSTRIE      St. %d/3   (+18%% Legierung/Daten)\nV SICHERHEIT     St. %d/3   (+Kuehlung)\nKosten wachsen mit jeder Forschungsstufe." % [
 		int(state.branches["energy"]), int(state.branches["industry"]), int(state.branches["containment"])]
 	var prep: String = "B = SINGULARITAET STARTEN!" if state.prestige_eligible() else "B = PRESTIGE (F5, 8V, 800D, 3500E)"
-	prestige_label.text = "KERNE: %d  |  DAUERBONUS +%d%%\n%s" % [
-		state.prestige_cores, state.prestige_cores * 15, prep]
+	prestige_label.text = "KERNE: %d  |  DAUERBONUS +%d%%\n%s\n%s" % [
+		state.prestige_cores, state.prestige_cores * 15, prep,
+		"FINALE ERREICHT // INDUSTRIE GERETTET" if state.campaign_complete else "N FINALE: F7 + 2 KERNE + 25 VOID + 250 BAUTEILE + 2500 DATEN"]
 	var goal: Dictionary = state.current_directive()
 	if goal.is_empty():
 		mission_label.text = "ALLE DIREKTIVEN ABGESCHLOSSEN\nWeitere Sektoren sind in Entwicklung."
