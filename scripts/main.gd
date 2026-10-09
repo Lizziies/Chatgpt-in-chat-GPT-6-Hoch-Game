@@ -6,6 +6,7 @@ const StateScript = preload("res://scripts/game_state.gd")
 const PlayerScript = preload("res://scripts/player.gd")
 const EnemyScript = preload("res://scripts/threat.gd")
 const HudScript = preload("res://scripts/hud.gd")
+const GridScript = preload("res://scripts/power_grid.gd")
 const SAVE_PATH := "user://void_save.json"
 const SAVE_LIMIT := 32768
 
@@ -16,6 +17,10 @@ var pads: Array[Dictionary] = []
 var enemies: Array[AnomalyThreat] = []
 var animated_parts: Array[Node3D] = []
 var alarm_lights: Array[OmniLight3D] = []
+var power_cables: Array[Node3D] = []
+var wave_cooldown: float = 220.0
+var last_network_connections: int = 0
+var confirm_prestige_seconds: float = 0.0
 var selected_machine: String = "generator"
 var ui_timer: float = 0.0
 var attack_timer: float = 0.0
@@ -36,6 +41,7 @@ func _ready() -> void:
 	state.breach_requested.connect(_spawn_breach)
 	_create_materials()
 	_create_world()
+	_recalculate_power_grid()
 	player = PlayerScript.new()
 	player.position = Vector3(0.0, 1.0, 11.0)
 	add_child(player)
@@ -282,6 +288,13 @@ func _process(delta: float) -> void:
 	var dt: float = minf(delta, 0.2)
 	world_time += dt
 	state.tick(dt)
+	wave_cooldown -= dt
+	confirm_prestige_seconds = maxf(0.0, confirm_prestige_seconds - dt)
+	if wave_cooldown <= 0.0:
+		wave_cooldown = 175.0 + randf_range(0.0, 70.0)
+		if state.tech_level >= 2 and state.instability > 12.0:
+			hud.announce("ALARM: Instabilitaet zieht Anomalien an!")
+			_spawn_breach(2 + state.tech_level / 2)
 	var under_alarm: bool = not enemies.is_empty() or state.instability > 55.0
 	var flash: float = 1.1 + 1.4 * absf(sin(world_time * 5.0)) if under_alarm else 0.0
 	for beacon in alarm_lights:
@@ -300,7 +313,7 @@ func _process(delta: float) -> void:
 
 func _refresh_hud() -> void:
 	if is_instance_valid(hud) and is_instance_valid(player):
-		hud.refresh(state, player.health, selected_machine, enemies.size())
+		hud.refresh(state, player.health, selected_machine, enemies.size(), last_network_connections)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
@@ -321,6 +334,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_G: state.experiment(true)
 		KEY_C: state.pulse()
 		KEY_Q: state.claim_directive()
+		KEY_Z: state.upgrade_branch("energy")
+		KEY_X: state.upgrade_branch("industry")
+		KEY_V: state.upgrade_branch("containment")
+		KEY_B: _try_prestige()
 		KEY_T: state.repair_core()
 		KEY_P: _save_game()
 		KEY_O: _load_game()
@@ -343,6 +360,68 @@ func _try_build() -> void:
 		return
 	if state.buy_machine(selected_machine):
 		_build_machine(nearest, selected_machine)
+		_recalculate_power_grid()
+		if not state.power_grid_enabled:
+			hud.announce("WLAN? Kein Netzwerk: Bau-Netz offline.")
+		elif state.machine_count(selected_machine) < int(state.machines[selected_machine]):
+			hud.announce("ACHTUNG: Maschine ohne Energieanschluss! Baue Richtung Reaktorkern.")
+
+func _try_prestige() -> void:
+	if not state.prestige_eligible():
+		state.initiate_prestige()
+		return
+	if confirm_prestige_seconds <= 0.0:
+		confirm_prestige_seconds = 9.0
+		hud.announce("SINGULARITAET: B erneut innerhalb von 9s = Fabrik-RESET. Kerne bleiben!")
+		return
+	confirm_prestige_seconds = 0.0
+	if state.initiate_prestige():
+		_clear_factory()
+		_recalculate_power_grid()
+		for e in enemies:
+			if is_instance_valid(e):
+				e.queue_free()
+		enemies.clear()
+		player.health = 100.0
+
+func _clear_factory() -> void:
+	animated_parts.clear()
+	for i in range(pads.size()):
+		var old: Variant = pads[i]["machine_node"]
+		if is_instance_valid(old):
+			old.queue_free()
+		pads[i]["machine_node"] = null
+		pads[i]["kind"] = ""
+
+func _recalculate_power_grid() -> void:
+	for wire in power_cables:
+		if is_instance_valid(wire):
+			wire.queue_free()
+	power_cables.clear()
+	var snapshot: Dictionary = GridScript.solve(pads)
+	state.configure_power_grid(snapshot["counts"])
+	last_network_connections = int(snapshot["connected"])
+	for link in snapshot["links"]:
+		var connection: Vector2i = link
+		var finish: Vector3 = pads[connection.y]["position"] + Vector3(0, 0.34, 0)
+		var start: Vector3 = Vector3(0, 0.5, 0) if connection.x < 0 else pads[connection.x]["position"] + Vector3(0, 0.34, 0)
+		var wire: MeshInstance3D = _pipe(start, finish, 0.055, mat_neon)
+		if wire != null:
+			power_cables.append(wire)
+	# Unpowered machines receive dim red warning beacons.
+	for i in range(pads.size()):
+		var pad: Dictionary = pads[i]
+		var machine_node: Variant = pad["machine_node"]
+		if not is_instance_valid(machine_node):
+			continue
+		var existing: Node = machine_node.get_node_or_null("PowerWarning")
+		if existing != null:
+			existing.queue_free()
+		if not snapshot["powered"][i]:
+			var warning := Node3D.new()
+			warning.name = "PowerWarning"
+			machine_node.add_child(warning)
+			_box(Vector3(0.52, 0.12, 0.52), Vector3(0, 3.6, 0), mat_red, false, warning)
 
 func _on_status(message: String) -> void:
 	if is_instance_valid(hud):
@@ -431,7 +510,7 @@ func _save_game() -> void:
 	var serialized_pads: Array[String] = []
 	for pad in pads:
 		serialized_pads.append(str(pad["kind"]))
-	var snapshot := {"version": 2, "state": state.to_save(), "pads": serialized_pads}
+	var snapshot := {"version": 3, "state": state.to_save(), "pads": serialized_pads}
 	var data_string: String = JSON.stringify(snapshot)
 	if data_string.length() > SAVE_LIMIT:
 		hud.announce("Spielstand zu gross. Speichern abgebrochen.")
@@ -463,7 +542,7 @@ func _load_game() -> void:
 		hud.announce("Ungueltiger Spielstand.")
 		return
 	var parsed: Dictionary = document
-	if parsed.get("version", -1) != 1 and parsed.get("version", -1) != 2:
+	if parsed.get("version", -1) != 1 and parsed.get("version", -1) != 2 and parsed.get("version", -1) != 3:
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
 	var restored_pads: Variant = parsed.get("pads", [])
@@ -503,13 +582,7 @@ func _load_game() -> void:
 		if is_instance_valid(e):
 			e.queue_free()
 	enemies.clear()
-	animated_parts.clear()
-	for i in range(pads.size()):
-		var old: Variant = pads[i]["machine_node"]
-		if is_instance_valid(old):
-			old.queue_free()
-		pads[i]["machine_node"] = null
-		pads[i]["kind"] = ""
+	_clear_factory()
 	for kind in IndustryState.MACHINES:
 		state.machines[kind] = 0
 	for i in range(pads.size()):
@@ -517,5 +590,6 @@ func _load_game() -> void:
 		if kind != "":
 			_build_machine(i, kind)
 			state.machines[kind] = int(state.machines[kind]) + 1
+	_recalculate_power_grid()
 	hud.announce("LOKALER SPIELSTAND GELADEN.")
 	_refresh_hud()
