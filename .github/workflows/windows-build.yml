@@ -39,6 +39,9 @@ jobs:
       - name: Execute logic smoke tests
         run: /tmp/godot --headless --path . --script res://tests/smoke.gd
 
+      - name: Integration test for atomic local saves
+        run: /tmp/godot --headless --path . --script res://tests/save_integration.gd
+
       - name: Start real 3D game in headless mode
         shell: bash
         run: |
