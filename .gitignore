@@ -1,0 +1,18 @@
+# Godot generated content
+.godot/
+.import/
+*.tmp
+
+# Exports / local artifacts
+dist/
+build/
+*.exe
+*.pck
+*.zip
+*.tpz
+*.log
+*.user
+
+# Personal settings and game saves MUST NOT be committed
+*.save
+void_save.json
