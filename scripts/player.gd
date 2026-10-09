@@ -18,6 +18,7 @@ var model: Node3D
 var pitch: float = -0.13
 var yaw: float = 0.0
 var shot_cooldown: float = 0.0
+var mouse_sensitivity: float = MOUSE_SENSITIVITY
 var gait_time: float = 0.0
 var arm_left: MeshInstance3D
 var arm_right: MeshInstance3D
@@ -86,8 +87,8 @@ func _make_part(part_name: String, pos: Vector3, size: Vector3, color: Color, gl
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var motion := event as InputEventMouseMotion
-		yaw -= motion.relative.x * MOUSE_SENSITIVITY
-		pitch = clampf(pitch - motion.relative.y * MOUSE_SENSITIVITY, -0.7, 0.45)
+		yaw -= motion.relative.x * mouse_sensitivity
+		pitch = clampf(pitch - motion.relative.y * mouse_sensitivity, -0.7, 0.45)
 		orbit.rotation.y = yaw
 		if not tactical:
 			view.rotation.x = pitch - 0.15
@@ -105,9 +106,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				shoot.emit(view.global_position, -view.global_transform.basis.z)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		var key := event as InputEventKey
-		if key.keycode == KEY_ESCAPE:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		elif key.keycode == KEY_TAB:
+		if key.keycode == KEY_TAB:
 			tactical = not tactical
 			if tactical:
 				view.position = Vector3(0, 22.0, 14.0)

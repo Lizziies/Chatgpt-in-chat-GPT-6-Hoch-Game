@@ -56,3 +56,8 @@ func toggle_audio() -> void:
 	enabled = not enabled
 	effect_player.stream_paused = not enabled
 	drone.stream_paused = not enabled
+
+func set_volume(value: float) -> void:
+	var scaled: float = clampf(value, 0.0, 1.0)
+	effect_player.volume_db = linear_to_db(maxf(scaled, 0.0001)) - 8.0
+	drone.volume_db = linear_to_db(maxf(scaled, 0.0001)) - 25.0

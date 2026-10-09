@@ -10,6 +10,7 @@ const GridScript = preload("res://scripts/power_grid.gd")
 const PlacementScript = preload("res://scripts/placement_rules.gd")
 const ConveyorScript = preload("res://scripts/conveyor_network.gd")
 const AudioScript = preload("res://scripts/procedural_audio.gd")
+const MenuScript = preload("res://scripts/main_menu.gd")
 const SAVE_PATH := "user://void_save.json"
 const SAVE_TEMP_PATH := "user://void_save.pending"
 const SAVE_LIMIT := 32768
@@ -23,6 +24,9 @@ var belt_visuals: Array[Node3D] = []
 var cargo_visuals: Array[Node3D] = []
 var belt_paths: Array = []
 var audio: VoidAudio
+var menu: VoidMainMenu
+var game_started: bool = false
+var last_load_ok: bool = false
 var build_ghost: MeshInstance3D
 var conveyor_routes: int = 0
 var build_distance: float = 9.0
@@ -64,8 +68,77 @@ func _ready() -> void:
 	audio = AudioScript.new()
 	add_child(audio)
 	_create_build_preview()
+	menu = MenuScript.new()
+	add_child(menu)
+	menu.new_game_requested.connect(_start_new_game)
+	menu.continue_requested.connect(_continue_game)
+	menu.resume_requested.connect(_resume_game)
+	menu.save_requested.connect(_menu_save)
+	menu.title_requested.connect(_return_to_title)
+	menu.mouse_speed_changed.connect(func(value: float) -> void: player.mouse_sensitivity = value)
+	menu.audio_volume_changed.connect(func(value: float) -> void: audio.set_volume(value))
+	menu.show_title(FileAccess.file_exists(SAVE_PATH))
+	get_tree().paused = true
 	hud.announce("REAKTOR ONLINE. Folge den Auftraegen und baue deine Industrie aus.")
 	_refresh_hud()
+
+func _start_new_game() -> void:
+	if game_started:
+		# A new game discards only in-memory progress. Existing manual saves are untouched.
+		var fresh: IndustryState = StateScript.new()
+		state.energy = fresh.energy
+		state.alloy = fresh.alloy
+		state.data = fresh.data
+		state.void_matter = fresh.void_matter
+		state.components = 0.0
+		state.components_produced = 0.0
+		state.tech_level = 0
+		state.prestige_cores = 0
+		state.waves_survived = 0
+		state.directive_index = 0
+		state.charge = 0.0
+		state.core_health = 100.0
+		state.instability = 0.0
+		state.overdrive_seconds = 0.0
+		for kind in IndustryState.BRANCHES:
+			state.branches[kind] = 0
+		for kind in IndustryState.MACHINES:
+			state.machines[kind] = 0
+		_clear_factory()
+		belt_cells.clear()
+		_refresh_conveyors()
+		_recalculate_power_grid()
+		player.global_position = Vector3(0, 1, 11)
+		player.health = 100.0
+		for enemy in enemies:
+			if is_instance_valid(enemy):
+				enemy.queue_free()
+		enemies.clear()
+	game_started = true
+	_resume_game()
+	hud.announce("Neuer Industriekomplex initialisiert.")
+
+func _continue_game() -> void:
+	_load_game()
+	if not last_load_ok:
+		menu.show_notice("Spielstand konnte nicht geladen werden.")
+		return
+	game_started = true
+	_resume_game()
+
+func _resume_game() -> void:
+	if game_started:
+		menu.resume()
+
+func _menu_save() -> void:
+	_save_game()
+	menu.show_notice("Speicherbefehl ausgefuehrt. Siehe HUD fuer Ergebnis.")
+
+func _return_to_title() -> void:
+	get_tree().paused = true
+	menu.show_title(FileAccess.file_exists(SAVE_PATH))
+	menu.can_continue = FileAccess.file_exists(SAVE_PATH)
+	game_started = true
 
 func _create_materials() -> void:
 	mat_floor = _material(Color(0.105, 0.13, 0.15), 0.58, 0.77)
@@ -341,7 +414,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
 		return
 	var key := event as InputEventKey
-	if not key.pressed or key.echo:
+	if not key.pressed or key.echo or (is_instance_valid(menu) and menu.visible):
 		return
 	match key.keycode:
 		KEY_1: selected_machine = "generator"
@@ -709,6 +782,7 @@ func _save_game() -> void:
 	hud.announce("LOKAL UND SICHER GESPEICHERT - Nur im Godot-Appverzeichnis.")
 
 func _load_game() -> void:
+	last_load_ok = false
 	if not FileAccess.file_exists(SAVE_PATH):
 		hud.announce("Kein lokaler Spielstand vorhanden.")
 		return
@@ -836,6 +910,7 @@ func _load_game() -> void:
 		belt_cells.append(cell)
 	_recalculate_power_grid()
 	_refresh_conveyors()
+	last_load_ok = true
 	hud.announce("LOKALER SPIELSTAND GELADEN.")
 	_refresh_hud()
 
