@@ -81,7 +81,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			view.rotation.x = pitch - 0.15
 	elif event is InputEventMouseButton:
 		var click := event as InputEventMouseButton
-		if click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		if click.button_index == MOUSE_BUTTON_WHEEL_UP and click.pressed:
+			_zoom_camera(-1.0)
+		elif click.button_index == MOUSE_BUTTON_WHEEL_DOWN and click.pressed:
+			_zoom_camera(1.0)
+		elif click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
 			if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			elif shot_cooldown <= 0.0:
@@ -99,6 +103,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				view.position = Vector3(0, 2.3, 7.2)
 				view.rotation.x = pitch - 0.15
+
+func _zoom_camera(step: float) -> void:
+	if tactical:
+		view.position.y = clampf(view.position.y + step * 1.7, 11.0, 30.0)
+		view.position.z = clampf(view.position.z + step, 8.0, 22.0)
+	else:
+		view.position.z = clampf(view.position.z + step, 3.2, 11.0)
 
 func _physics_process(delta: float) -> void:
 	shot_cooldown = maxf(0.0, shot_cooldown - delta)
