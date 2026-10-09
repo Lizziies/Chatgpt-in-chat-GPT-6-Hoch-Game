@@ -9,6 +9,9 @@ var build_label: Label
 var research_label: Label
 var mission_label: Label
 var pulse_label: Label
+var power_label: Label
+var specialty_label: Label
+var prestige_label: Label
 var vitals_label: Label
 var toast_label: Label
 var toast_timer: float = 0.0
@@ -41,6 +44,15 @@ func _ready() -> void:
 	var task_box := _column(task_panel)
 	_label(task_box, "DIREKTIVE // PRODUKTIONSZIELE", 14, Color(0.45, 0.93, 0.94))
 	mission_label = _label(task_box, "", 13, Color(0.90, 0.92, 0.97))
+	var power_panel := _panel(root, Vector2(22, 349), Vector2(440, 70))
+	var power_box := _column(power_panel)
+	_label(power_box, "REAKTOR // ENERGIE-NETZWERK", 14, Color(0.45, 0.93, 0.94))
+	power_label = _label(power_box, "", 13, Color(0.90, 0.92, 0.97))
+	var upgrade_panel := _panel(root, Vector2(-398, 334), Vector2(378, 180), true)
+	var upgrade_box := _column(upgrade_panel)
+	_label(upgrade_box, "FORSCHUNGSZWEIGE // AB STUFE 2", 14, Color(0.45, 0.93, 0.94))
+	specialty_label = _label(upgrade_box, "", 13, Color(0.90, 0.92, 0.97))
+	prestige_label = _label(upgrade_box, "", 13, Color(0.97, 0.77, 0.49))
 	var bottom_panel := _panel(root, Vector2(22, -113), Vector2(910, 88), false, true)
 	var bottom_box := _column(bottom_panel)
 	status_label = _label(bottom_box, "ERWACHEN // Stelle die Energieversorgung wieder her.", 14, Color(0.94, 0.97, 1.0))
@@ -95,7 +107,7 @@ func _label(parent: Node, text: String, size: int, color: Color) -> Label:
 	parent.add_child(l)
 	return l
 
-func refresh(state: IndustryState, player_health: float, selected: String, enemy_count: int) -> void:
+func refresh(state: IndustryState, player_health: float, selected: String, enemy_count: int, connected_count: int) -> void:
 	var production: Dictionary = state.get_production()
 	resource_label.text = "ENERGIE  %s  (+%s/s)\nLEGIERUNG %s (+%s/s)  |  DATEN %s (+%s/s)\nVOID %s  |  FEINDE %d" % [
 		_num(state.energy), _num(float(production["energy"])),
@@ -119,6 +131,13 @@ func refresh(state: IndustryState, player_health: float, selected: String, enemy
 			int(price["energy"]), int(price["data"])]
 	pulse_label.text = "KONDENSATOR-LADUNG: %d%%  |  OVERDRIVE: %ds" % [
 		int(state.charge), int(ceil(state.overdrive_seconds))]
+	power_label.text = "VERSORGT: %d / %d MASCHINEN   |   TRENNUNG = 0%% OUTPUT" % [
+		connected_count, _machine_total(state)]
+	specialty_label.text = "Z ENERGIE        St. %d/3   (+25%% je Stufe)\nX INDUSTRIE      St. %d/3   (+18%% Legierung/Daten)\nV SICHERHEIT     St. %d/3   (+Kuehlung)\nKosten wachsen mit jeder Forschungsstufe." % [
+		int(state.branches["energy"]), int(state.branches["industry"]), int(state.branches["containment"])]
+	var prep: String = "B = SINGULARITAET STARTEN!" if state.prestige_eligible() else "B = PRESTIGE (F5, 8V, 800D, 3500E)"
+	prestige_label.text = "KERNE: %d  |  DAUERBONUS +%d%%\n%s" % [
+		state.prestige_cores, state.prestige_cores * 15, prep]
 	var goal: Dictionary = state.current_directive()
 	if goal.is_empty():
 		mission_label.text = "ALLE DIREKTIVEN ABGESCHLOSSEN\nWeitere Sektoren sind in Entwicklung."
@@ -139,6 +158,12 @@ func _process(delta: float) -> void:
 		toast_timer -= delta
 		if toast_timer <= 0.0 and is_instance_valid(toast_label):
 			toast_label.text = ""
+
+func _machine_total(state: IndustryState) -> int:
+	var count: int = 0
+	for kind in IndustryState.MACHINES:
+		count += int(state.machines[kind])
+	return count
 
 func _num(amount: float) -> String:
 	if amount >= 1000000.0:
