@@ -2,6 +2,8 @@ extends SceneTree
 ## Headless regression suite. No filesystem writes or network.
 const IndustryScript = preload("res://scripts/game_state.gd")
 const GridScript = preload("res://scripts/power_grid.gd")
+const PlaceScript = preload("res://scripts/placement_rules.gd")
+const BeltScript = preload("res://scripts/conveyor_network.gd")
 
 var failures: int = 0
 var assertions: int = 0
@@ -215,6 +217,40 @@ func _execute() -> void:
 	var broken: Dictionary = chain.to_save()
 	broken["components_produced"] = 0.0
 	_check(not chain.restore(broken), "invalid component history rejected")
+	# v5: spatial construction, collision protection and actual conveyor connectivity.
+	var empty_belts: Array[Vector2i] = []
+	var free_build: Array[Dictionary] = [{"kind": "fabricator", "position": Vector3(7, 0, 7)}]
+	_check(not PlaceScript.machine_allowed(Vector3.ZERO, free_build, empty_belts), "core clearance")
+	_check(not PlaceScript.machine_allowed(Vector3(7, 0, 7), free_build, empty_belts), "overlap rejected")
+	_check(PlaceScript.machine_allowed(Vector3(14, 0, 7), free_build, empty_belts), "free snapped build site")
+	_check(not PlaceScript.machine_allowed(Vector3(80, 0, 7), free_build, empty_belts), "out of world rejected")
+	_check(PlaceScript.snap(Vector3(8.0, 0.0, 5.0)) == Vector3(7, 0, 3.5), "grid snapping")
+	_check(not PlaceScript.validate_layout([{"kind":"generator","position":Vector3(7.1,0,7)}], []), "reject offgrid saved machine")
+	_check(not PlaceScript.validate_layout([{"kind":"generator","position":Vector3(7,0,7)},{"kind":"extractor","position":Vector3(7,0,7)}], []), "reject overlap in saved layout")
+	var route_machines: Array[Dictionary] = [
+		{"kind":"fabricator", "position":Vector3(7,0,7)},
+		{"kind":"harvester", "position":Vector3(21,0,7)}
+	]
+	var route_tiles: Array[Vector2i] = [Vector2i(3,2),Vector2i(4,2),Vector2i(5,2)]
+	var enabled: Array[bool] = [true,true]
+	_check(PlaceScript.validate_layout(route_machines, route_tiles), "valid freeform factory layout")
+	var logistics: Dictionary = BeltScript.solve(route_machines, route_tiles, enabled)
+	_check(int(logistics["routes"]) == 1, "functional factory to harvester conveyor")
+	_check(int(logistics["active_tiles"]) == 3, "physical tile connections")
+	route_tiles.remove_at(1)
+	_check(int(BeltScript.solve(route_machines, route_tiles, enabled)["routes"]) == 0, "broken belt no logistics bonus")
+	enabled[1] = false
+	route_tiles.insert(1, Vector2i(4,2))
+	_check(int(BeltScript.solve(route_machines, route_tiles, enabled)["routes"]) == 0, "unpowered harvester cannot receive goods")
+	chain.logistics_routes = 2
+	_check(int(chain.to_save()["version"]) == 5, "v5 saves format")
+	_check(chain.restore(JSON.parse_string(JSON.stringify(chain.to_save()))), "v5 state roundtrip")
+	_check(chain.logistics_routes == 2, "logistics rebuilt by world on loading, not overwritten")
+	# Legacy save v4 is still supported as a state-level migration.
+	var legacy_v4: Dictionary = chain.to_save()
+	legacy_v4["version"] = 4
+	_check(chain.restore(legacy_v4), "v4 restore migration")
+
 	if failures == 0:
 		print("SMOKE_TEST_PASS: %d assertions" % assertions)
 	else:
