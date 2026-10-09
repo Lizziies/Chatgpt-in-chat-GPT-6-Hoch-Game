@@ -18,6 +18,11 @@ var model: Node3D
 var pitch: float = -0.13
 var yaw: float = 0.0
 var shot_cooldown: float = 0.0
+var gait_time: float = 0.0
+var arm_left: MeshInstance3D
+var arm_right: MeshInstance3D
+var leg_left: MeshInstance3D
+var leg_right: MeshInstance3D
 
 func _ready() -> void:
 	name = "Operator"
@@ -40,6 +45,13 @@ func _ready() -> void:
 	_make_part("RightLeg", Vector3(0.2, 0.47, 0), Vector3(0.24, 0.82, 0.25), Color(0.11, 0.14, 0.19))
 	_make_part("LeftArm", Vector3(-0.49, 1.14, -0.03), Vector3(0.22, 0.68, 0.26), Color(0.13, 0.18, 0.22))
 	_make_part("RightArm", Vector3(0.49, 1.14, -0.03), Vector3(0.22, 0.68, 0.26), Color(0.13, 0.18, 0.22))
+	arm_left = model.get_node("LeftArm")
+	arm_right = model.get_node("RightArm")
+	leg_left = model.get_node("LeftLeg")
+	leg_right = model.get_node("RightLeg")
+	_make_part("ChestPlate", Vector3(0, 1.23, -0.23), Vector3(0.53, 0.55, 0.10), Color(0.23, 0.30, 0.33))
+	_make_part("Backpack", Vector3(0, 1.2, 0.28), Vector3(0.52, 0.60, 0.24), Color(0.09, 0.15, 0.19))
+	_make_part("HelmetRim", Vector3(0, 1.96, -0.04), Vector3(0.51, 0.09, 0.52), Color(0.30, 0.37, 0.40))
 	orbit = Node3D.new()
 	orbit.name = "CameraRig"
 	orbit.position = Vector3(0, 1.45, 0)
@@ -132,6 +144,14 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, direction.z * speed, 22.0 * delta)
 	if direction.length_squared() > 0.02:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(-direction.x, -direction.z), delta * 11.0)
+		gait_time += delta * (13.0 if speed == SPRINT_SPEED else 9.0)
+	var amount: float = minf(1.0, Vector2(velocity.x, velocity.z).length() / WALK_SPEED)
+	var swing: float = sin(gait_time) * 0.55 * amount
+	leg_left.rotation.x = lerpf(leg_left.rotation.x, swing, delta * 12.0)
+	leg_right.rotation.x = lerpf(leg_right.rotation.x, -swing, delta * 12.0)
+	arm_left.rotation.x = lerpf(arm_left.rotation.x, -swing * 0.7, delta * 12.0)
+	arm_right.rotation.x = lerpf(arm_right.rotation.x, swing * 0.7, delta * 12.0)
+	model.position.y = sin(gait_time * 2.0) * 0.045 * amount
 	move_and_slide()
 
 func take_damage(amount: float) -> void:
