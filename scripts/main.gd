@@ -238,6 +238,7 @@ func _create_world() -> void:
 		_box(Vector3(0.9, 0.26, 0.9), point + Vector3(0, 4.8, 0), mat_amber)
 		if i % 2 == 0:
 			_light(point + Vector3(0, 4.45, 0), Color(0.13, 0.72, 0.91), 1.25, 13.0)
+	_create_industrial_districts()
 	for i in range(4):
 		var a: float = TAU * float(i) / 4.0 + PI / 4.0
 		var x: float = cos(a) * 23.0
@@ -245,6 +246,40 @@ func _create_world() -> void:
 		_box(Vector3(6.2, 1.5, 3.2), Vector3(x, 0.75, z), mat_steel)
 		_box(Vector3(4.5, 2.5, 2.2), Vector3(x, 2.35, z), mat_dark)
 		_pipe(Vector3(x-2, 3, z), Vector3(x+2, 3, z), 0.18, mat_amber)
+
+func _create_industrial_districts() -> void:
+	# Three distinctive themed sectors, all generated from our own primitives.
+	# Scenic details are non-colliding so they cannot block the player or power grid.
+	var sectors: Array[Dictionary] = [
+		{"name": "ENERGY", "at": Vector3(-33, 0, -31), "glow": mat_neon},
+		{"name": "RESEARCH", "at": Vector3(32, 0, -31), "glow": mat_amber},
+		{"name": "CONTAINMENT", "at": Vector3(31, 0, 32), "glow": mat_red}
+	]
+	for sector in sectors:
+		var center: Vector3 = sector["at"]
+		var accent: Material = sector["glow"]
+		_box(Vector3(13, 0.15, 13), center + Vector3(0, 0.02, 0), mat_dark)
+		for edge in [-1.0, 1.0]:
+			_box(Vector3(13, 0.11, 0.20), center + Vector3(0, 0.14, edge * 6.5), accent)
+			_box(Vector3(0.20, 0.11, 13), center + Vector3(edge * 6.5, 0.14, 0), accent)
+		for i in range(5):
+			var u: float = float(i) * 2.1 - 4.2
+			_box(Vector3(1.2, 0.6, 1.3), center + Vector3(u, 0.5, -3.8), mat_steel)
+			_box(Vector3(0.86, 0.11, 0.9), center + Vector3(u, 0.87, -3.8), accent)
+		if str(sector["name"]) == "ENERGY":
+			for i in range(3):
+				_cylinder(center + Vector3((i - 1) * 3.2, 2.4, 2.0), 0.9, 4.3, mat_dark)
+				_cylinder(center + Vector3((i - 1) * 3.2, 4.7, 2.0), 0.92, 0.18, mat_neon)
+		elif str(sector["name"]) == "RESEARCH":
+			for i in range(3):
+				_box(Vector3(2.0, 2.5, 2.0), center + Vector3((i - 1) * 3.4, 1.8, 2.0), mat_steel)
+				_box(Vector3(1.7, 0.8, 0.14), center + Vector3((i - 1) * 3.4, 2.1, 0.94), mat_neon)
+		else:
+			for i in range(4):
+				var x: float = float(i) * 2.7 - 4.05
+				_cylinder(center + Vector3(x, 2.1, 2.0), 0.67, 3.8, mat_dark)
+				_cylinder(center + Vector3(x, 2.1, 2.0), 0.28, 3.7, mat_red)
+		_light(center + Vector3(0, 5.2, 0), Color(0.17, 0.65, 0.76) if accent == mat_neon else Color(0.85, 0.26, 0.15), 1.4, 13.0)
 
 func _create_pad(location: Vector3) -> void:
 	_cylinder(location + Vector3(0, 0.085, 0), 2.05, 0.18, mat_steel)
