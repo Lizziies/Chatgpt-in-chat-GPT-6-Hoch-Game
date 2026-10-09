@@ -203,6 +203,7 @@ func _execute() -> void:
 	_check(chain.components > 0.0, "fabricator outputs components")
 	_check(chain.components_produced >= chain.components, "lifetime production tracked")
 	chain.components = 100.0
+	chain.components_produced = 100.0
 	_check(chain.buy_machine("harvester"), "void harvester requires components")
 	var void_before: float = chain.void_matter
 	chain.tick(1.0)
