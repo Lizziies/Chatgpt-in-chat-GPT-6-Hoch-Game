@@ -339,6 +339,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_V: state.upgrade_branch("containment")
 		KEY_B: _try_prestige()
 		KEY_Y: _try_elite_trial()
+		KEY_H: hud.toggle_help()
 		KEY_T: state.repair_core()
 		KEY_P: _save_game()
 		KEY_O: _load_game()

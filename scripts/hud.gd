@@ -12,6 +12,7 @@ var pulse_label: Label
 var power_label: Label
 var specialty_label: Label
 var prestige_label: Label
+var help_panel: PanelContainer
 var vitals_label: Label
 var toast_label: Label
 var toast_timer: float = 0.0
@@ -67,6 +68,15 @@ func _ready() -> void:
 	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(crosshair)
 	toast_label = _label(bottom_box, "", 14, Color(1.0, 0.68, 0.41))
+	help_panel = _panel(root, Vector2(480, 140), Vector2(650, 510))
+	help_panel.visible = false
+	var help_box := _column(help_panel)
+	_label(help_box, "VOID INDUSTRIES // OPERATOREN-HANDBUCH", 23, Color(0.45, 0.93, 0.94))
+	_label(help_box, "DER KOMPLEX  •  DEIN ZIEL", 17, Color(0.97, 0.77, 0.49))
+	_label(help_box, "Erzeuge Energie, baue ein zusammenhaengendes Maschinen-Netz und erforsche immer riskantere Technologien. Steht eine Maschine nicht in Reichweite des Reaktors oder anderer aktiver Maschinen, produziert sie nichts.", 15, Color(0.89, 0.94, 0.99))
+	_label(help_box, "WASD laufen  |  SHIFT sprinten  |  LEERTASTE springen\nMAUS drehen  |  RAD zoomen  |  TAB Baukamera\n1–6 Maschinentyp  |  E bauen (nahe Plattform)\nF Forschung  |  Z/X/V Forschungszweige\nR Riskantes Experiment  |  G Sichereres Experiment\nC Netz-Puls  |  Q Auftrag einloesen  |  T reparieren\nLINKSKLICK schiessen  |  Y Elite-Kampf (Stufe 4+)\nB Prestige (zweimal bestaetigen)\nP Lokal speichern  |  O Lokal laden\nESC Maus freigeben  |  H Handbuch anzeigen/schliessen", 14, Color(0.87, 0.93, 0.96))
+	_label(help_box, "DATENSCHUTZ", 16, Color(0.45, 0.93, 0.94))
+	_label(help_box, "Kein Login. Keine Telemetrie. Offline spielbar. Speicherungen ausschliesslich nach Tastendruck auf P in den lokalen App-Daten.", 14, Color(0.87, 0.93, 0.96))
 
 func _panel(parent: Control, offset: Vector2, dims: Vector2, align_right: bool = false, align_bottom: bool = false) -> PanelContainer:
 	var panel := PanelContainer.new()
@@ -107,6 +117,10 @@ func _label(parent: Node, text: String, size: int, color: Color) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
 	return l
+
+func toggle_help() -> void:
+	help_panel.visible = not help_panel.visible
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if help_panel.visible else Input.MOUSE_MODE_CAPTURED
 
 func refresh(state: IndustryState, player_health: float, selected: String, enemy_count: int, connected_count: int) -> void:
 	var production: Dictionary = state.get_production()
