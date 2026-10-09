@@ -3,7 +3,7 @@
 Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten Experimenten, begehbarer Fabrik und gelegentlichen Kämpfen. **Open Source – MIT-Lizenz.**
 
 ## Status
-**Version 0.2 – Spielbare Pre-Alpha.** Neue Aufträge, echte Freischaltungen, sechs Maschinen, reaktive Alarmbeleuchtung und weitere Produktionstiefe. Das Spiel ist noch lange nicht fertig oder kommerziell getestet.
+**Version 0.3 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
 
 ## Datenschutz als Architekturprinzip
 - Kein Account, keine Werbung, keine Online-Schnittstellen, kein HTTP, keine Telemetrie.
@@ -24,7 +24,7 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 1. GitHub Actions → `Godot CI & Windows Build` → erfolgreiches Workflow-Ergebnis öffnen.
 2. Artifact `VOID-INDUSTRIES-Windows` herunterladen und entpacken.
 3. `VOID_INDUSTRIES.exe` unter Windows starten. Windows SmartScreen kann bei nicht signierten Alpha-Builds warnen: nur Builds aus dem offiziellen Repository verwenden.
-4. Alternativ das Repository mit Godot 4.4.1 öffnen und `F6`/Projekt starten.
+4. Alternativ das Repository mit Godot 4.4.1 öffnen und `F5`/Projekt starten.
 
 ### Steuerung
 | Taste | Aktion |
@@ -42,12 +42,26 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | G | Teureres, risikoärmeres Experiment |
 | C | Netz-Puls (bei 100 Kondensator-Ladung: 25s dreifache Produktion) |
 | Q | Erledigten Auftrag einlösen |
+| Z / X / V | Energie-, Industrie- oder Sicherheitsforschung (ab Stufe 2) |
+| B (zweimal) | Prestige/Singularität nach Freischaltung bestätigen |
+| Y | Freiwilligen Elite-Kampf starten (ab Forschung 4, Ressourcen nötig) |
+| H | Bedienungs-Handbuch im Spiel anzeigen |
 | Linksklick | Energieblaster |
 | Esc | Maus freigeben; Linksklick im Spielfeld zum Einfangen |
 | P / O | Spiel manuell speichern / laden |
 
 ## Grundschleife
 Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschinen freischalten → Aufträge erfüllen und Belohnungen abholen → riskante oder stabilisierte Experimente durchführen → Anomalien abwehren → Produktionsboost nutzen. Die Produktion läuft beim Kämpfen weiter.
+
+### Neue Systeme in Version 0.3
+- **Physisches Energie-Netzwerk:** Nur Maschinen, die über sichtbare Leitungen mit dem Reaktor verbunden sind, arbeiten. Neue Maschinen können andere Maschinen als Verbindungsbrücke versorgen. Nicht verbundene Module werden markiert.
+- **Drei Produktionskombinationen:** Extraktor neben Labor erhöht Forschungsdaten, Generator neben Kondensator erhöht Laderate und Stabilisator neben Geschützturm erhöht dessen Angriffskraft. Alle Kombinationen erfordern aktive Verbindungen.
+- **Drei Forschungszweige:** Energie, Industrie und Containment mit jeweils 3 Stufen, Materialkosten und echten Effekten.
+- **Prestige / Singularität:** Nach Forschung 5 und genügend Ressourcen mit `B` zweimal bestätigen. Die Fabrik setzt sich zurück, aber bleibende Kerne gewähren einen permanenten Produktionsbonus.
+- **Gelegentliche Bedrohungen:** Experimentbedingte Anomalien, dazu ein seltener Gefahrendirektor bei hoher Instabilität; Kämpfe unterbrechen die Produktion nicht.
+- **Elite-Anomalie:** Freiwillige Bossprüfung ab Forschung 4 mit deutlich stärkerem Gegner und besonderen Ressourcenbelohnungen.
+- **Ingame-Handbuch:** `H` zeigt Steuerung, Strategie und Datenschutz ohne Internetverbindung.
+- **Spielstandformat v3:** liest ältere v1/v2-Spielstände, speichert neue Forschungszweige und Prestige-Fortschritt. Keine automatische Dateisynchronisation.
 
 ### Neue Systeme in Version 0.2
 - **8 Direktiven:** konkrete Ziele, sichtbarer Fortschritt und optionale Belohnungen; `Q` holt fertige Aufträge ab.
@@ -56,7 +70,7 @@ Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschin
 - **7 Forschungsstufen:** schalten Turm, Kondensator und Stabilisator frei und steigern die Produktion.
 - **Zwei Experimentprotokolle:** `R` spart Ressourcen, ist gefährlicher; `G` kostet mehr, reduziert das Risiko.
 - **Industrie-Atmosphäre:** ergänzte Leitungen, Warnmarkierungen und bei Gefahr pulsierende Alarmbeleuchtung.
-- **Speicherformat v2:** manuelles lokales Speichern (`P`) und Laden (`O`); Spielstände aus v1 werden weiterhin gelesen.
+- **Speicherformat v2 (historisch):** frühere Verbesserungen am lokalen Spielstand; die aktuelle Version verwendet v3.
 
 ### Spielstandsicherheit
 Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschinen geprüft. Nur das feste Godot-`user://`-Spielstandsverzeichnis wird verwendet. Spielstände werden **nicht** automatisch hochgeladen; es gibt keinen Cloud-Sync. Kein automatisches Speichern. Bei Absturz unmittelbar beim Speichern ist eine Beschädigung möglich – Backups sind für eine spätere Version geplant.
@@ -70,6 +84,7 @@ Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschine
 - [x] Freiwilliges lokales Save/Load
 - [x] Windows-Build-Pipeline und grundlegende Tests
 - [ ] Hochwertige 3D-Modelle, Charakteranimationen, Sounddesign, optimierte PBR-Materialien
-- [ ] Physische Produktionsketten, verzweigter Forschungsbaum, Prestige
+- [x] Stromnetz-Abhängigkeiten, drei Forschungszweige und erstes Prestige-System
+- [ ] Größere Produktionsketten, Logistikbänder, Forschung über mehrere Sektoren und Prestige-Erweiterungen
 - [ ] Barrierefreiheit, Controller, Übersetzungen
-- [ ] Spielbalance, Langzeittests, Steam-Release
+- [ ] Balancing, Windows-11-Grafiktests, Sicherheitsreview durch Dritte, Steam-Release

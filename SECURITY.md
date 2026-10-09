@@ -6,7 +6,9 @@ VOID INDUSTRIES is an offline, open-source game. Privacy is a design requirement
 - No online accounts, network traffic, ads, cloud sync or telemetry are implemented.
 - No access to user profile details, browser data, Windows credentials or other games.
 - Save/load requires a keypress and uses only Godot's `user://void_save.json` (app-specific data directory).
-- Save input is size limited and schema validated; unknown save versions are refused.
+- Save input is size limited and schema validated; unknown save versions are refused. Versions 1 and 2 are explicitly migrated into version 3.
+- The gameplay audit rejects network clients, process/OS inspection, and filesystem APIs outside the narrowly-scoped save/load module.
+- Saves are manual and not atomic yet. A crash during writing can corrupt the local save. Backups and atomic replacement are planned.
 - Our source has no third-party game dependencies or plugins.
 - GitHub Actions builds from the public code with pinned Godot 4.4.1 and read-only GitHub permissions.
 

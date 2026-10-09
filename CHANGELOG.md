@@ -1,5 +1,17 @@
 # Änderungsprotokoll
 
+## Pre-Alpha 0.3 — 2026-10-09
+- Stromgebundene Fabrik mit dynamisch gezeichneten Energie-Verbindungskabeln.
+- Drei neue Nachbarschafts-Kombinationen und entsprechende Produktions- bzw. Kampfvorteile.
+- Drei optionale Forschungszweige: Energie, Industrie, Containment, je 3 Stufen.
+- Prestige-System mit permanenten Singularitätskernen und doppelter Bestätigung.
+- Manuell startbarer Elite-Kampf mit eigenem Gegnerprofil und seltener Beute.
+- Anomalie-Direktor bei hoher Instabilität.
+- Spielbares Ingame-Handbuch und zusätzliche Statusanzeigen.
+- Saveformat 3, kompatibel mit Version 1 und 2; weiterhin komplett lokal.
+- Erneuerte Tests für Graph-Verbindungen, Synergien, Forschungszweige, Prestige und Save-Migration.
+- Ausgeweitete CI-Datenschutzregeln ohne weitreichende Betriebssystem-/Datei-APIs.
+
 ## Pre-Alpha 0.2 — 2026-10-09
 - 2 neue Maschinen: Kondensator und Stabilisator.
 - 7 Forschungsstufen mit echten Bau-Freischaltungen.
@@ -19,10 +31,10 @@
 - Lokales manuelles Speichern/Laden und automatisierter Windows-Godot-Export.
 
 ## Nächste Meilensteine
-- Visualisierung eines zusammenhängenden Energie-Netzwerks.
-- Verzweigter Forschungsbaum und veränderbare Fabrik-Layouts.
+- Ausbaubare Förderbänder und Logistik-Ketten mit echten Transportgütern.
+- Forschungsmatrix als interaktive Benutzeroberfläche und freie Fabrik-Layouts.
 - Besserer Kampf, Animationen, Sound und Bedienelemente.
-- Mehrstufiges Prestige- und Langzeit-Progressionssystem.
+- Mehrstufige Prestige-Welten, Fraktionen und längere Kampagnen.
 - Performance-Tests, Controller-Steuerung, Lokalisierung und Windows-Spieltests.
 
 **Versionshinweis:** Das Repository bleibt während der Pre-Alpha aktiv in Entwicklung; noch keine stabile Veröffentlichung.
