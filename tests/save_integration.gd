@@ -17,18 +17,18 @@ func _execute() -> void:
 	root.add_child(game)
 	_check(game.menu.mode == "title", "startup begins at title screen")
 	_check(game.menu.visible, "title screen visible")
-	_check(get_tree().paused, "gameplay paused while in main menu")
+	_check(paused, "gameplay paused while in main menu")
 	game._start_new_game()
-	_check(not get_tree().paused, "new game starts gameplay")
+	_check(not paused, "new game starts gameplay")
 	_check(not game.menu.visible, "menu hides on game start")
 	game.menu.show_pause()
-	_check(get_tree().paused, "pause stops gameplay")
+	_check(paused, "pause stops gameplay")
 	game._resume_game()
-	_check(not get_tree().paused, "resume returns to running game")
+	_check(not paused, "resume returns to running game")
 	game.menu.show_victory()
 	_check(game.menu.mode == "victory", "victory screen accessible")
 	game._resume_game()
-	_check(not get_tree().paused, "victory allows sandbox continuation")
+	_check(not paused, "victory allows sandbox continuation")
 	game.state.energy = 734.0
 	game.state.data = 612.0
 	game.state.tech_level = 2
