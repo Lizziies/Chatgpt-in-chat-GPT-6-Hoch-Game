@@ -44,7 +44,7 @@ func _ready() -> void:
 	var task_box := _column(task_panel)
 	_label(task_box, "DIREKTIVE // PRODUKTIONSZIELE", 14, Color(0.45, 0.93, 0.94))
 	mission_label = _label(task_box, "", 13, Color(0.90, 0.92, 0.97))
-	var power_panel := _panel(root, Vector2(22, 349), Vector2(440, 70))
+	var power_panel := _panel(root, Vector2(22, 349), Vector2(440, 91))
 	var power_box := _column(power_panel)
 	_label(power_box, "REAKTOR // ENERGIE-NETZWERK", 14, Color(0.45, 0.93, 0.94))
 	power_label = _label(power_box, "", 13, Color(0.90, 0.92, 0.97))
@@ -131,8 +131,10 @@ func refresh(state: IndustryState, player_health: float, selected: String, enemy
 			int(price["energy"]), int(price["data"])]
 	pulse_label.text = "KONDENSATOR-LADUNG: %d%%  |  OVERDRIVE: %ds" % [
 		int(state.charge), int(ceil(state.overdrive_seconds))]
-	power_label.text = "VERSORGT: %d / %d MASCHINEN   |   TRENNUNG = 0%% OUTPUT" % [
-		connected_count, _machine_total(state)]
+	power_label.text = "VERSORGT: %d / %d MASCHINEN\nKOMBOS: LAB+EX %d | GEN+CAP %d | TOWER+STAB %d" % [
+		connected_count, _machine_total(state),
+		int(state.synergies["lab_extractor"]), int(state.synergies["generator_capacitor"]),
+		int(state.synergies["turret_stabilizer"])]
 	specialty_label.text = "Z ENERGIE        St. %d/3   (+25%% je Stufe)\nX INDUSTRIE      St. %d/3   (+18%% Legierung/Daten)\nV SICHERHEIT     St. %d/3   (+Kuehlung)\nKosten wachsen mit jeder Forschungsstufe." % [
 		int(state.branches["energy"]), int(state.branches["industry"]), int(state.branches["containment"])]
 	var prep: String = "B = SINGULARITAET STARTEN!" if state.prestige_eligible() else "B = PRESTIGE (F5, 8V, 800D, 3500E)"

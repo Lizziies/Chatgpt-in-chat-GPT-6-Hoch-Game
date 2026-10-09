@@ -361,9 +361,7 @@ func _try_build() -> void:
 	if state.buy_machine(selected_machine):
 		_build_machine(nearest, selected_machine)
 		_recalculate_power_grid()
-		if not state.power_grid_enabled:
-			hud.announce("WLAN? Kein Netzwerk: Bau-Netz offline.")
-		elif state.machine_count(selected_machine) < int(state.machines[selected_machine]):
+		if state.machine_count(selected_machine) < int(state.machines[selected_machine]):
 			hud.announce("ACHTUNG: Maschine ohne Energieanschluss! Baue Richtung Reaktorkern.")
 
 func _try_prestige() -> void:
@@ -399,7 +397,7 @@ func _recalculate_power_grid() -> void:
 			wire.queue_free()
 	power_cables.clear()
 	var snapshot: Dictionary = GridScript.solve(pads)
-	state.configure_power_grid(snapshot["counts"])
+	state.configure_power_grid(snapshot["counts"], snapshot["synergies"])
 	last_network_connections = int(snapshot["connected"])
 	for link in snapshot["links"]:
 		var connection: Vector2i = link
@@ -481,7 +479,7 @@ func _turret_attack() -> void:
 				nearest = enemy
 		if nearest != null:
 			_spawn_beam(origin, nearest.global_position + Vector3(0, 1.1, 0), mat_amber)
-			nearest.take_hit(22.0 + state.tech_level * 4.0)
+			nearest.take_hit(22.0 + state.tech_level * 4.0 + float(state.synergies["turret_stabilizer"]) * 8.0)
 
 func _on_shoot(origin: Vector3, direction: Vector3) -> void:
 	var ray := PhysicsRayQueryParameters3D.create(origin, origin + direction * 70.0)

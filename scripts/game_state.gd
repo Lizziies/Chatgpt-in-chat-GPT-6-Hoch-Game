@@ -51,6 +51,7 @@ var directive_index: int = 0
 var prestige_cores: int = 0
 var power_grid_enabled: bool = false
 var powered_machines: Dictionary = {}
+var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0}
 var branches: Dictionary = {"energy": 0, "industry": 0, "containment": 0}
 const BRANCHES := ["energy", "industry", "containment"]
 const BRANCH_MAX_LEVEL: int = 3
@@ -66,8 +67,10 @@ func machine_count(kind: String) -> int:
 		return int(powered_machines.get(kind, 0))
 	return int(machines.get(kind, 0))
 
-func configure_power_grid(counts: Dictionary) -> void:
+func configure_power_grid(counts: Dictionary, adjacency: Dictionary = {}) -> void:
 	power_grid_enabled = true
+	for synergy in synergies:
+		synergies[synergy] = mini(32, maxi(0, int(adjacency.get(synergy, 0))))
 	powered_machines.clear()
 	for kind in MACHINES:
 		powered_machines[kind] = mini(int(machines[kind]), maxi(0, int(counts.get(kind, 0))))
@@ -79,8 +82,8 @@ func tick(delta: float) -> void:
 	var multiplier: float = get_multiplier()
 	energy = clampf(energy + ((3.5 + 5.0 * float(machine_count("generator"))) * multiplier - 0.9 * float(machine_count("laboratory"))) * delta, 0.0, MAX_RESOURCES)
 	alloy = clampf(alloy + (0.65 + 1.75 * float(machine_count("extractor"))) * multiplier * (1.0 + float(branches["industry"]) * 0.18) * delta, 0.0, MAX_RESOURCES)
-	data = clampf(data + 0.9 * float(machine_count("laboratory")) * multiplier * (1.0 + float(branches["industry"]) * 0.18) * delta, 0.0, MAX_RESOURCES)
-	charge = clampf(charge + 1.9 * float(machine_count("capacitor")) * delta, 0.0, 100.0)
+	data = clampf(data + 0.9 * float(machine_count("laboratory")) * multiplier * (1.0 + float(branches["industry"]) * 0.18) * (1.0 + float(synergies["lab_extractor"]) * 0.22) * delta, 0.0, MAX_RESOURCES)
+	charge = clampf(charge + 1.9 * float(machine_count("capacitor")) * (1.0 + float(synergies["generator_capacitor"]) * 0.25) * delta, 0.0, 100.0)
 	var stabilizers: int = machine_count("stabilizer")
 	var base_cooling: float = 0.18
 	if stabilizers > 0 and energy > 2.0:
@@ -101,7 +104,7 @@ func get_production() -> Dictionary:
 	return {
 		"energy": (3.5 + 5.0 * float(machine_count("generator"))) * mult - 0.9 * float(machine_count("laboratory")) - 1.5 * float(machine_count("stabilizer")),
 		"alloy": (0.65 + 1.75 * float(machine_count("extractor"))) * mult * (1.0 + float(branches["industry"]) * 0.18),
-		"data": 0.9 * float(machine_count("laboratory")) * mult * (1.0 + float(branches["industry"]) * 0.18)
+		"data": 0.9 * float(machine_count("laboratory")) * mult * (1.0 + float(branches["industry"]) * 0.18) * (1.0 + float(synergies["lab_extractor"]) * 0.22)
 	}
 
 func is_unlocked(kind: String) -> bool:

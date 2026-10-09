@@ -122,6 +122,26 @@ func _execute() -> void:
 	linked.tick(1.0)
 	_check(linked.data > 0.0, "reconnected machine resumes output")
 
+	# Adjacency combos strengthen production, stored energy and defense.
+	var combos: Array[Dictionary] = [
+		{"kind": "generator", "position": Vector3(3, 0, 0)},
+		{"kind": "capacitor", "position": Vector3(5, 0, 0)},
+		{"kind": "extractor", "position": Vector3(0, 0, 4)},
+		{"kind": "laboratory", "position": Vector3(0, 0, 7)},
+		{"kind": "turret", "position": Vector3(-5, 0, 0)},
+		{"kind": "stabilizer", "position": Vector3(-7, 0, 0)}
+	]
+	var built_combos: Dictionary = GridScript.solve(combos)
+	_check(int(built_combos["synergies"]["generator_capacitor"]) > 0, "generator and capacitor combo")
+	_check(int(built_combos["synergies"]["lab_extractor"]) > 0, "extractor and laboratory combo")
+	_check(int(built_combos["synergies"]["turret_stabilizer"]) > 0, "defensive tower and stabilizer combo")
+	linked.machines["capacitor"] = 1
+	linked.configure_power_grid(built_combos["counts"], built_combos["synergies"])
+	_check(int(linked.synergies["lab_extractor"]) > 0, "grid synergy copied into economy")
+	var old_charge: float = linked.charge
+	linked.tick(1.0)
+	_check(linked.charge > old_charge + 1.9, "capacitor adjacency accelerates charge")
+
 	# Research specializations and long-term prestige after completing the tech tree.
 	var specialists: IndustryState = IndustryScript.new()
 	root.add_child(specialists)
