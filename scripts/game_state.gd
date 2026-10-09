@@ -58,6 +58,8 @@ var charge: float = 0.0
 var overdrive_seconds: float = 0.0
 var directive_index: int = 0
 var prestige_cores: int = 0
+var campaign_complete: bool = false
+var singularity_record: int = 0
 var power_grid_enabled: bool = false
 var powered_machines: Dictionary = {}
 var synergies: Dictionary = {"lab_extractor": 0, "generator_capacitor": 0, "turret_stabilizer": 0, "extractor_fabricator": 0, "stabilizer_harvester": 0}
@@ -246,6 +248,21 @@ func authorize_containment_trial() -> bool:
 	status.emit("EINSPERRUNGS-PROTOKOLL: Elite-Anomalie freigesetzt!")
 	return true
 
+func final_objective_ready() -> bool:
+	return not campaign_complete and tech_level >= MAX_LEVEL and prestige_cores >= 2 and void_matter >= 25.0 and components >= 250.0 and data >= 2500.0 and core_health >= 75.0
+
+func complete_campaign() -> bool:
+	if not final_objective_ready():
+		status.emit("FINALE: Forschung 7, 2 Prestige-Kerne, 25 VOID, 250 Bauteile, 2500 Daten, Reaktor 75%% benoetigt.")
+		return false
+	void_matter -= 25.0
+	components -= 250.0
+	data -= 2500.0
+	campaign_complete = true
+	singularity_record += 1
+	status.emit("KAMPAGNE ABGESCHLOSSEN! VOID INDUSTRIES: SINGULARITAET VERSIEGELT.")
+	return true
+
 func prestige_eligible() -> bool:
 	return tech_level >= 5 and void_matter >= 8.0 and data >= 800.0 and energy >= 3500.0
 
@@ -376,7 +393,8 @@ func to_save() -> Dictionary:
 		"tech_level": tech_level, "waves_survived": waves_survived,
 		"lifetime_seconds": lifetime_seconds, "charge": charge,
 		"overdrive_seconds": overdrive_seconds, "directive_index": directive_index,
-		"prestige_cores": prestige_cores, "branches": branches.duplicate(true)
+		"prestige_cores": prestige_cores, "branches": branches.duplicate(true),
+		"campaign_complete": campaign_complete, "singularity_record": singularity_record
 	}
 
 func restore(saved: Dictionary) -> bool:
@@ -417,6 +435,15 @@ func restore(saved: Dictionary) -> bool:
 				return false
 			if int(saved_branches[kind]) > 0 and int(saved["tech_level"]) < 2:
 				return false
+	if version >= 5:
+		if saved.has("campaign_complete") and typeof(saved["campaign_complete"]) != TYPE_BOOL:
+			return false
+		if saved.has("singularity_record"):
+			if typeof(saved["singularity_record"]) != TYPE_INT and typeof(saved["singularity_record"]) != TYPE_FLOAT:
+				return false
+			var record: float = float(saved["singularity_record"])
+			if is_nan(record) or is_inf(record) or record < 0.0 or record > 10000.0 or floor(record) != record:
+				return false
 	if version >= 4 and float(saved["components_produced"]) < float(saved["components"]):
 		return false
 	energy = float(saved["energy"])
@@ -434,6 +461,8 @@ func restore(saved: Dictionary) -> bool:
 	overdrive_seconds = float(saved.get("overdrive_seconds", 0.0))
 	directive_index = int(saved.get("directive_index", 0))
 	prestige_cores = int(saved.get("prestige_cores", 0))
+	campaign_complete = bool(saved.get("campaign_complete", false))
+	singularity_record = int(saved.get("singularity_record", 0))
 	var restored_branches: Dictionary = saved.get("branches", {})
 	for kind in BRANCHES:
 		branches[kind] = int(restored_branches.get(kind, 0))
