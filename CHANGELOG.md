@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## Pre-Alpha 0.6 — 2026-10-09
+- Startmenü, „Neues Spiel“, „Fortsetzen“, Pause und manuelles Speichern.
+- Einstellbare Mausempfindlichkeit und Lautstärke (ohne persönliche Profile).
+- Kampagnenabschluss durch ausreichend Forschung, Prestige, Bauteile, Daten und VOID.
+- Eigener Siegbildschirm mit Sandbox-Fortsetzung.
+- Drei dekorativ verschiedene Industriezonen mit eigenen Maschinen und Leuchtelementen.
+- Neue Menü-Zustandstests und weiterführende Release-Checkliste.
+
 ## Pre-Alpha 0.5 — 2026-10-09
 - Maschinen von festen Plattformen auf freie, überprüfte Rasterplatzierung umgestellt.
 - Förderband-Routing zwischen Fabrikator und Harvester mit BFS, animierter Fracht und Produktionsbonus.

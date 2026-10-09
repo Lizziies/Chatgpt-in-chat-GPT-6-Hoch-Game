@@ -3,7 +3,7 @@
 Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten Experimenten, begehbarer Fabrik und gelegentlichen Kämpfen. **Open Source – MIT-Lizenz.**
 
 ## Status
-**Version 0.5 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
+**Version 0.6 – Spielbare Pre-Alpha mit Kampagnenabschluss.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
 
 ## Datenschutz als Architekturprinzip
 - Kein Account, keine Werbung, keine Online-Schnittstellen, kein HTTP, keine Telemetrie.
@@ -19,6 +19,14 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 - Codegenerierte 3D-Umgebung und Materialien: keine externen Asset-Lizenzen oder Binärdateien nötig
 - Windows 11 (x86-64) über reproduzierbaren GitHub-Actions-Export
 - Quelloffen: eigene Spielinhalte unter MIT (siehe LICENSE), Godot-Engine unter separater MIT-Lizenz
+
+## Version 0.6: Hauptmenü, Pause und vollständiger Spielablauf
+- Titelmenü mit Neuem Spiel, optionalem Fortsetzen, Erklärung und Beenden.
+- Pausenmenü mit manuellem Speichern, Einstellungen und Titelbildschirm.
+- Lautstärke und Mausempfindlichkeit innerhalb einer Sitzung veränderbar; keine neuen Konfigurationsdateien.
+- Eigener Sieg-Bildschirm nach Erreichen der Singularitäts-Kampagnenziele; danach freies Weiterspielen.
+- Drei optisch unterscheidbare Industriezonen: Energie, Forschung und Containment.
+- Automatische Integrationstests der Menü-Zustandswechsel, des Speicherns und des Spielstarts.
 
 ## Spielen
 1. GitHub Actions → `Godot CI & Windows Build` → erfolgreiches Workflow-Ergebnis öffnen.
@@ -51,7 +59,8 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | Y | Freiwilligen Elite-Kampf starten (ab Forschung 4, Ressourcen nötig) |
 | H | Bedienungs-Handbuch im Spiel anzeigen |
 | Linksklick | Energieblaster |
-| Esc | Maus freigeben; Linksklick im Spielfeld zum Einfangen |
+| Esc | Pause / Menü; Maus wird freigegeben |
+| N | Kampagnenabschluss auslösen, sobald alle Voraussetzungen erfüllt sind |
 | P / O | Spiel manuell speichern / laden |
 
 ## Kampagnenende
@@ -115,4 +124,5 @@ Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschine
 - [x] Freie Rasterplatzierung, visuelle Förderbänder, Produktionsbonus durch physische Logistik
 - [ ] Verschiedene Industriezonen, umfangreichere Förderbandlogistik mit Item-Puffern, weitere Ressourcen und Prestige-Erweiterungen
 - [ ] Barrierefreiheit, Controller, Übersetzungen
-- [ ] Balancing, Windows-11-Grafiktests, Sicherheitsreview durch Dritte, Steam-Release
+- [x] Titel-/Pausenmenü, Sitzungs-Einstellungen und Kampagnenende mit Abschlussbildschirm
+- [ ] Langzeit-Balancing, Windows-11-Grafiktests, Performanceprofiling, Accessibility-Audit, Sicherheitsreview durch Dritte, Steam-Release
