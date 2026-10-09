@@ -748,7 +748,14 @@ func _load_game() -> void:
 				hud.announce("Ungueltige alte Maschinen.")
 				return
 			if old_pads[i] != "":
-				restored_machines.append({"kind": old_pads[i], "position": old_positions[i]})
+				if not IndustryState.MACHINES.has(old_pads[i]):
+					hud.announce("Altes Fabriklayout enthaelt ungueltige Maschinen.")
+					return
+				var converted: Vector3 = _legacy_find_free_position(old_positions[i], restored_machines)
+				if not PlacementRules.in_bounds(converted):
+					hud.announce("Altes Fabriklayout konnte nicht verschoben werden.")
+					return
+				restored_machines.append({"kind": old_pads[i], "position": converted})
 	else:
 		var saved_machines: Variant = parsed.get("machines", [])
 		var saved_belts: Variant = parsed.get("belts", [])
@@ -839,3 +846,18 @@ func _legacy_pad_positions() -> Array[Vector3]:
 		var distance: float = 11.8 + 6.8 * float(i % 2)
 		positions.append(Vector3(cos(angle) * distance, 0.0, sin(angle) * distance))
 	return positions
+
+func _legacy_find_free_position(original: Vector3, converted: Array) -> Vector3:
+	# Old circular pad coordinates were not snapped and cannot be serialized in v5.
+	var origin: Vector3 = PlacementRules.snap(original)
+	if PlacementRules.machine_allowed(origin, converted, []):
+		return origin
+	for radius in range(1, 8):
+		for dx in range(-radius, radius + 1):
+			for dz in range(-radius, radius + 1):
+				if maxi(absi(dx), absi(dz)) != radius:
+					continue
+				var candidate: Vector3 = origin + Vector3(float(dx) * PlacementRules.CELL, 0.0, float(dz) * PlacementRules.CELL)
+				if PlacementRules.machine_allowed(candidate, converted, []):
+					return candidate
+	return Vector3(10000.0, 0.0, 10000.0)

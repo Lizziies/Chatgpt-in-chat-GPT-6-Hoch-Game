@@ -44,6 +44,26 @@ func _execute() -> void:
 	_check(int(game.state.prestige_cores) == 3, "permanent cores restored")
 	_check(game.pads.size() == 1, "free placed machine restored")
 	_check(game.belt_cells.size() == 1, "conveyor tile restored")
+	# A v4 layout with fixed, non-grid circular pad positions must migrate to v5.
+	var legacy_pads: Array[String] = []
+	for i in range(18):
+		legacy_pads.append("generator" if i == 0 else "")
+	var legacy_state: Dictionary = game.state.to_save()
+	legacy_state["version"] = 4
+	legacy_state["tech_level"] = 2
+	var legacy_document: Dictionary = {"version": 4, "state": legacy_state, "pads": legacy_pads}
+	var legacy_file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	_check(legacy_file != null, "legacy migration fixture file opened")
+	if legacy_file != null:
+		legacy_file.store_string(JSON.stringify(legacy_document))
+		legacy_file.close()
+		game._load_game()
+		_check(game.pads.size() == 1, "legacy circular pad migrated")
+		_check(game.pads[0]["position"] == PlacementRules.snap(game.pads[0]["position"]), "legacy position snapped")
+		game._save_game()
+		game._clear_factory()
+		game._load_game()
+		_check(game.pads.size() == 1, "migrated v5 file reload succeeds")
 	# Tests execute on isolated cloud runner, but cleanup stays application-local.
 	var cleanup: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	_check(cleanup == OK, "temporary test save cleaned")
