@@ -20,14 +20,20 @@ func _execute() -> void:
 	game.state.tech_level = 2
 	game.state.branches["energy"] = 1
 	game.state.prestige_cores = 3
+	game.pads.append({"position": Vector3(7, 0, 7), "kind": "", "machine_node": null})
+	game._build_machine(game.pads.size() - 1, "generator")
+	game.state.machines["generator"] = 1
+	game.belt_cells.append(Vector2i(4, 2))
 	game._save_game()
-	_check(FileAccess.file_exists(SAVE_PATH), "version 3 save file created")
+	_check(FileAccess.file_exists(SAVE_PATH), "version 5 save file created")
 	_check(not FileAccess.file_exists(TEMP_PATH), "save staging file renamed")
 	game.state.energy = 4.0
 	game.state.data = 0.0
 	game.state.tech_level = 0
 	game.state.branches["energy"] = 0
 	game.state.prestige_cores = 0
+	game._clear_factory()
+	game.belt_cells.clear()
 	game._load_game()
 	if int(game.state.tech_level) != 2:
 		print("SAVE_DIAGNOSTIC: " + game.hud.status_label.text)
@@ -36,6 +42,8 @@ func _execute() -> void:
 	_check(int(game.state.tech_level) == 2, "research restored")
 	_check(int(game.state.branches["energy"]) == 1, "branch restored")
 	_check(int(game.state.prestige_cores) == 3, "permanent cores restored")
+	_check(game.pads.size() == 1, "free placed machine restored")
+	_check(game.belt_cells.size() == 1, "conveyor tile restored")
 	# Tests execute on isolated cloud runner, but cleanup stays application-local.
 	var cleanup: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	_check(cleanup == OK, "temporary test save cleaned")

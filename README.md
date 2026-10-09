@@ -3,7 +3,7 @@
 Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten Experimenten, begehbarer Fabrik und gelegentlichen Kämpfen. **Open Source – MIT-Lizenz.**
 
 ## Status
-**Version 0.4 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
+**Version 0.5 – Spielbare Pre-Alpha.** Begehbare 3D-Fabrik, echtes stromgebundenes Produktionsnetz, Maschinen-Synergien, Forschungszweige, Prestige, gefährliche Experimente und freiwilliger Elite-Kampf. Noch **kein fertiges Spiel** und noch nicht grafisch unter Windows 11 getestet.
 
 ## Datenschutz als Architekturprinzip
 - Kein Account, keine Werbung, keine Online-Schnittstellen, kein HTTP, keine Telemetrie.
@@ -37,8 +37,10 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 | 1 / 2 / 3 / 4 | Generator / Extraktor / Labor / Turm auswählen |
 | 5 / 6 | Kondensator / Stabilisator wählen (Forschung nötig) |
 | 7 / 8 | Fabrikator / Void-Harvester (ab Forschungsstufe 3 / 4) |
-| J | Nächstgelegene Maschine abbauen und 40 % des Grundmaterialwerts zurückbekommen |
-| E | Maschine auf der nächsten freien Bauplattform errichten |
+| J | Nächste Maschine abbauen und 40 % des Materialwerts zurückbekommen |
+| K / L | Förderband am Bau-Raster bauen / entfernen (Forschungsstufe 2) |
+| M | Lokalen Sound ein-/ausschalten |
+| E | Gewählte Maschine frei auf dem angezeigten Bau-Raster platzieren |
 | F | Forschung kaufen |
 | R | Riskantes Experiment starten |
 | G | Teureres, risikoärmeres Experiment |
@@ -54,6 +56,15 @@ Ein düsteres, offline spielbares 3D-Incremental-/Automation-Spiel mit riskanten
 
 ## Grundschleife
 Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschinen freischalten → Aufträge erfüllen und Belohnungen abholen → riskante oder stabilisierte Experimente durchführen → Anomalien abwehren → Produktionsboost nutzen. Die Produktion läuft beim Kämpfen weiter.
+
+### Neue Systeme in Version 0.5
+- **Freie Maschinenplatzierung:** Auf einem Raster innerhalb der Fabrik frei bauen, statt an 18 festen Plattformen. Bauabstände, Reaktorsicherheitszone und Weltgrenzen werden überprüft. Ein leuchtendes Vorschaufeld zeigt den Platz.
+- **Physische Förderbänder:** Mit K einzelne Bandsegmente setzen, mit L entfernen. Verbindet eine zusammenhängende Bandstrecke einen stromversorgten Fabrikator mit einem Harvester, läuft eine Bauteil-Transportanimation und die Void-Ausbeute steigt um 15 % pro Route (bis zu 75 %).
+- **Lokal synthetisierte Sounds:** Maschinenaktionen, Forschung, Alarm und ein leises Reaktor-Dröhnen. Kein Download und keine Audiodateien im Benutzerprofil. Mit M stumm schaltbar.
+- **Verbesserter Operator:** Zusätzliche Rüstungsteile und prozedurale Laufanimation.
+- **Größere Baufläche:** 114 × 114 statt bisher 82 × 82 Welteinheiten. Weiterhin eine geschlossene Fabrikhalle, noch keine komplett offene Welt.
+- **Saveformat v5:** Speichert echte Maschinenkoordinaten, Förderbandsegmente und das bisherige Wirtschafts-/Prestige-System. Alte Saveformate v1–v4 werden geladen und die festen Plattformen dabei wiederhergestellt.
+- **Sicherheitsgrenzen:** Maximal 110 Maschinen und 160 Förderbandsegmente. Vor dem Laden werden Koordinaten, Raster und Layout geprüft. Alle Funktionen sind offline.
 
 ### Neue Systeme in Version 0.4
 - **Bauteile als Ressource:** Fabrikatoren konsumieren Energie und Legierungen, um Bauteile herzustellen.
@@ -94,9 +105,11 @@ Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschine
 - [x] Experimente, Bedrohungen, einfache Kämpfe
 - [x] Freiwilliges lokales Save/Load
 - [x] Windows-Build-Pipeline und grundlegende Tests
-- [ ] Hochwertige 3D-Modelle, Charakteranimationen, Sounddesign, optimierte PBR-Materialien
+- [x] Einfache prozedurale Figurenanimationen und offline-synthetisierte Audioeffekte
+- [ ] Hochwertige realistische 3D-Modelle, professionelle Charakteranimationen, Musik/Sounddesign, optimierte PBR-Materialien
 - [x] Stromnetz-Abhängigkeiten, drei Forschungszweige und erstes Prestige-System
 - [x] Bauteile und automatische Void-Verarbeitung als erste mehrstufige Produktionsketten
-- [ ] Freie Platzierung, physische Logistikbänder, weitere Ressourcen und Prestige-Erweiterungen
+- [x] Freie Rasterplatzierung, visuelle Förderbänder, Produktionsbonus durch physische Logistik
+- [ ] Verschiedene Industriezonen, umfangreichere Förderbandlogistik mit Item-Puffern, weitere Ressourcen und Prestige-Erweiterungen
 - [ ] Barrierefreiheit, Controller, Übersetzungen
 - [ ] Balancing, Windows-11-Grafiktests, Sicherheitsreview durch Dritte, Steam-Release

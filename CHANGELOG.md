@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## Pre-Alpha 0.5 — 2026-10-09
+- Maschinen von festen Plattformen auf freie, überprüfte Rasterplatzierung umgestellt.
+- Förderband-Routing zwischen Fabrikator und Harvester mit BFS, animierter Fracht und Produktionsbonus.
+- Größere industrielle Baufläche, neue 3D-Bauvorschau.
+- Prozedural erzeugte Soundeffekte, Reaktor-Soundkulisse und Audio-Umschalter.
+- Animierte Operator-Bewegung und weitere prozedurale Rüstungsbauteile.
+- Speicherformat v5 mit validierter Layoutstruktur und Migration alter Spielstände.
+- Regressionstests für Platzierung, verbundene/unterbrochene Förderbänder und Migration.
+
 ## Pre-Alpha 0.4 — 2026-10-09
 - Fabrikator und Void-Harvester als neue 3D-Maschinentypen hinzugefügt.
 - Bauteile als lagerbare neue Ressource und Komponenten-Gesamtproduktionszähler.
