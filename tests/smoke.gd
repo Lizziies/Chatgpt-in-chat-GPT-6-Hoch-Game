@@ -1,6 +1,7 @@
 extends SceneTree
 ## Headless regression suite. No filesystem writes or network.
 const IndustryScript = preload("res://scripts/game_state.gd")
+const GridScript = preload("res://scripts/power_grid.gd")
 
 var failures: int = 0
 var assertions: int = 0
@@ -89,6 +90,80 @@ func _execute() -> void:
 	invalid = saved_v2.duplicate(true)
 	invalid["energy"] = INF
 	_check(not economy.restore(invalid), "non-finite resource rejected")
+
+	# Power grid graph: no remote production without a path to the reactor.
+	var sample: Array[Dictionary] = [
+		{"kind": "generator", "position": Vector3(4, 0, 0)},
+		{"kind": "laboratory", "position": Vector3(17, 0, 0)},
+		{"kind": "extractor", "position": Vector3(12, 0, 0)},
+		{"kind": "turret", "position": Vector3(30, 0, 0)}
+	]
+	var solved: Dictionary = GridScript.solve(sample)
+	_check(int(solved["connected"]) == 3, "grid BFS connects relay machines")
+	_check(int(solved["counts"]["turret"]) == 0, "distant turret unpowered")
+	_check(int(solved["counts"]["laboratory"]) == 1, "relay powers remote laboratory")
+	_check(solved["links"].size() == 3, "grid displays three cables")
+	var no_relay: Array[Dictionary] = [
+		{"kind": "generator", "position": Vector3(4, 0, 0)},
+		{"kind": "laboratory", "position": Vector3(17, 0, 0)}
+	]
+	var isolated: Dictionary = GridScript.solve(no_relay)
+	_check(int(isolated["connected"]) == 1, "isolated machine not connected")
+	var linked: IndustryState = IndustryScript.new()
+	root.add_child(linked)
+	linked.machines["generator"] = 2
+	linked.machines["laboratory"] = 1
+	linked.configure_power_grid({"generator": 1, "laboratory": 0})
+	_check(linked.machine_count("generator") == 1, "only powered generators produce")
+	_check(linked.machine_count("laboratory") == 0, "disconnected laboratory yields no data")
+	linked.tick(1.0)
+	_check(linked.data == 0.0, "disconnected machine no output")
+	linked.configure_power_grid({"generator": 2, "laboratory": 1})
+	linked.tick(1.0)
+	_check(linked.data > 0.0, "reconnected machine resumes output")
+
+	# Research specializations and long-term prestige after completing the tech tree.
+	var specialists: IndustryState = IndustryScript.new()
+	root.add_child(specialists)
+	_check(not specialists.upgrade_branch("energy"), "research gated before level two")
+	specialists.tech_level = 2
+	specialists.energy = 10000.0
+	specialists.data = 10000.0
+	specialists.alloy = 10000.0
+	specialists.void_matter = 50.0
+	_check(specialists.upgrade_branch("energy"), "energy research branch")
+	_check(specialists.upgrade_branch("industry"), "industrial research branch")
+	_check(specialists.upgrade_branch("containment"), "containment research branch")
+	_check(specialists.get_multiplier() > 1.8, "energy branch improves output")
+	_check(int(specialists.branches["energy"]) == 1, "branch levels persist in memory")
+	var valid_v3: Dictionary = specialists.to_save()
+	_check(specialists.restore(valid_v3), "v3 save round-trip")
+	var tampered: Dictionary = valid_v3.duplicate(true)
+	tampered["branches"]["energy"] = 999
+	_check(not specialists.restore(tampered), "out of-range research save rejected")
+	tampered = valid_v3.duplicate(true)
+	tampered["prestige_cores"] = 999
+	_check(not specialists.restore(tampered), "out of-range permanent core count rejected")
+	specialists.tech_level = 5
+	specialists.energy = 6000.0
+	specialists.data = 1800.0
+	specialists.void_matter = 10.0
+	specialists.machines["generator"] = 5
+	_check(specialists.prestige_eligible(), "tech threshold allows prestige")
+	_check(specialists.initiate_prestige(), "singularity resets temporary systems")
+	_check(specialists.tech_level == 0, "prestige resets tech")
+	_check(int(specialists.machines["generator"]) == 0, "prestige resets machines")
+	_check(specialists.prestige_cores == 1, "prestige grants permanent core")
+	_check(specialists.get_multiplier() >= 1.15, "permanent core grants 15 percent production")
+	_check(int(specialists.branches["energy"]) == 0, "prestige resets branch investment")
+	_check(not specialists.prestige_eligible(), "cannot instantly repeat prestige")
+	_check(not specialists.initiate_prestige(), "prestige gate rejects premature reset")
+	var migrated_v2: Dictionary = specialists.to_save()
+	migrated_v2["version"] = 2
+	migrated_v2.erase("prestige_cores")
+	migrated_v2.erase("branches")
+	_check(specialists.restore(migrated_v2), "v2 save migrates into v3")
+	_check(specialists.prestige_cores == 0, "legacy saves do not claim permanent cores")
 
 	if failures == 0:
 		print("SMOKE_TEST_PASS: %d assertions" % assertions)
