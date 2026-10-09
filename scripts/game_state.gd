@@ -349,17 +349,19 @@ func restore(saved: Dictionary) -> bool:
 			or float(saved["charge"]) > 100.0 or float(saved["overdrive_seconds"]) > 25.0):
 		return false
 	if version >= 3:
-		if not saved.has("prestige_cores") or typeof(saved["prestige_cores"]) != TYPE_INT:
+		if not saved.has("prestige_cores") or (typeof(saved["prestige_cores"]) != TYPE_INT and typeof(saved["prestige_cores"]) != TYPE_FLOAT):
 			return false
-		if int(saved["prestige_cores"]) < 0 or int(saved["prestige_cores"]) > 100:
+		var core_count: float = float(saved["prestige_cores"])
+		if is_nan(core_count) or is_inf(core_count) or core_count != floor(core_count) or core_count < 0.0 or core_count > 100.0:
 			return false
 		var saved_branches: Variant = saved.get("branches", {})
 		if typeof(saved_branches) != TYPE_DICTIONARY:
 			return false
 		for kind in BRANCHES:
-			if not saved_branches.has(kind) or typeof(saved_branches[kind]) != TYPE_INT:
+			if not saved_branches.has(kind) or (typeof(saved_branches[kind]) != TYPE_INT and typeof(saved_branches[kind]) != TYPE_FLOAT):
 				return false
-			if int(saved_branches[kind]) < 0 or int(saved_branches[kind]) > BRANCH_MAX_LEVEL:
+			var branch_level: float = float(saved_branches[kind])
+			if is_nan(branch_level) or is_inf(branch_level) or branch_level != floor(branch_level) or branch_level < 0.0 or branch_level > float(BRANCH_MAX_LEVEL):
 				return false
 			if int(saved_branches[kind]) > 0 and int(saved["tech_level"]) < 2:
 				return false

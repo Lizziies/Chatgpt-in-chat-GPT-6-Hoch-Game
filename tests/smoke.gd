@@ -158,6 +158,9 @@ func _execute() -> void:
 	_check(int(specialists.branches["energy"]) == 1, "branch levels persist in memory")
 	var valid_v3: Dictionary = specialists.to_save()
 	_check(specialists.restore(valid_v3), "v3 save round-trip")
+	var json_roundtrip: Variant = JSON.parse_string(JSON.stringify(valid_v3))
+	_check(typeof(json_roundtrip) == TYPE_DICTIONARY, "v3 JSON parses to a dictionary")
+	_check(specialists.restore(json_roundtrip), "v3 floating-point JSON integer migration")
 	var tampered: Dictionary = valid_v3.duplicate(true)
 	tampered["branches"]["energy"] = 999
 	_check(not specialists.restore(tampered), "out of-range research save rejected")
