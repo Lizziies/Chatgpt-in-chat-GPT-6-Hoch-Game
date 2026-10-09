@@ -42,7 +42,7 @@ func _ready() -> void:
 	player.respawned.connect(_on_respawn)
 	hud = HudScript.new()
 	add_child(hud)
-	hud.announce("REAKTOR ONLINE. Errichte Generatoren auf den markierten Bauplattformen.")
+	hud.announce("REAKTOR ONLINE. Folge den Auftraegen und baue deine Industrie aus.")
 	_refresh_hud()
 
 func _create_materials() -> void:
@@ -109,9 +109,9 @@ func _create_world() -> void:
 		_pipe(ring_point + Vector3(0, 1.2, 0), ring_point + Vector3(0, 3.5, 0), 0.12, mat_steel)
 		_pipe(ring_point + Vector3(0, 1.5, 0), ring_point + Vector3(0, 3.3, 0), 0.045, mat_neon)
 	_light(Vector3(0, 4.9, 0), Color(0.13, 0.83, 1.0), 8.0, 20.0)
-	for i in range(14):
-		var angle: float = TAU * float(i) / 14.0
-		var distance: float = 12.0 + 5.5 * float(i % 2)
+	for i in range(18):
+		var angle: float = TAU * float(i) / 18.0
+		var distance: float = 11.8 + 6.8 * float(i % 2)
 		var spot := Vector3(cos(angle) * distance, 0, sin(angle) * distance)
 		_create_pad(spot)
 	for i in range(18):
@@ -235,6 +235,22 @@ func _build_machine(index: int, kind: String) -> void:
 			_cylinder(Vector3(0, 2.15, 0), 0.85, 0.7, mat_steel, false, machine)
 			_pipe(Vector3(0, 2.2, -0.2), Vector3(0, 2.2, -1.7), 0.2, mat_neon, machine)
 			_box(Vector3(0.9, 0.1, 0.25), Vector3(0, 2.65, -0.2), mat_amber, false, machine)
+		"capacitor":
+			_cylinder(Vector3(0, 1.1, 0), 0.95, 0.45, mat_dark, false, machine)
+			_cylinder(Vector3(0, 1.85, 0), 0.57, 1.5, mat_neon, false, machine)
+			for i in range(4):
+				var a: float = TAU * float(i) / 4.0
+				_pipe(Vector3(cos(a) * 0.85, 0.95, sin(a) * 0.85), Vector3(cos(a) * 0.85, 2.55, sin(a) * 0.85), 0.11, mat_steel, machine)
+			animated_parts.append(_cylinder(Vector3(0, 2.85, 0), 0.9, 0.18, mat_amber, false, machine))
+		"stabilizer":
+			_box(Vector3(2.2, 1.4, 2.2), Vector3(0, 1.3, 0), mat_dark, false, machine)
+			for i in range(4):
+				var a: float = TAU * float(i) / 4.0
+				var off := Vector3(cos(a) * 0.85, 0, sin(a) * 0.85)
+				_cylinder(off + Vector3(0, 2.35, 0), 0.23, 1.1, mat_steel, false, machine)
+				_cylinder(off + Vector3(0, 3.0, 0), 0.29, 0.13, mat_amber, false, machine)
+			_cylinder(Vector3(0, 2.75, 0), 0.68, 0.6, mat_neon, false, machine)
+			animated_parts.append(_cylinder(Vector3(0, 3.25, 0), 0.85, 0.15, mat_neon, false, machine))
 	pad["kind"] = kind
 	pad["machine_node"] = machine
 	pads[index] = pad
@@ -270,9 +286,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_2: selected_machine = "extractor"
 		KEY_3: selected_machine = "laboratory"
 		KEY_4: selected_machine = "turret"
+		KEY_5: selected_machine = "capacitor"
+		KEY_6: selected_machine = "stabilizer"
 		KEY_E: _try_build()
 		KEY_F: state.research()
 		KEY_R: state.experiment()
+		KEY_G: state.experiment(true)
+		KEY_C: state.pulse()
+		KEY_Q: state.claim_directive()
 		KEY_T: state.repair_core()
 		KEY_P: _save_game()
 		KEY_O: _load_game()
@@ -383,7 +404,7 @@ func _save_game() -> void:
 	var serialized_pads: Array[String] = []
 	for pad in pads:
 		serialized_pads.append(str(pad["kind"]))
-	var snapshot := {"version": 1, "state": state.to_save(), "pads": serialized_pads}
+	var snapshot := {"version": 2, "state": state.to_save(), "pads": serialized_pads}
 	var data_string: String = JSON.stringify(snapshot)
 	if data_string.length() > SAVE_LIMIT:
 		hud.announce("Spielstand zu gross. Speichern abgebrochen.")
@@ -415,7 +436,7 @@ func _load_game() -> void:
 		hud.announce("Ungueltiger Spielstand.")
 		return
 	var parsed: Dictionary = document
-	if parsed.get("version", -1) != 1:
+	if parsed.get("version", -1) != 1 and parsed.get("version", -1) != 2:
 		hud.announce("Unbekannte Spielstand-Version.")
 		return
 	var restored_pads: Variant = parsed.get("pads", [])
@@ -427,7 +448,28 @@ func _load_game() -> void:
 			hud.announce("Spielstand enthaelt ungueltige Maschinen.")
 			return
 	var snapshot: Variant = parsed.get("state", {})
-	if typeof(snapshot) != TYPE_DICTIONARY or not state.restore(snapshot):
+	if typeof(snapshot) != TYPE_DICTIONARY:
+		hud.announce("Spielstand enthaelt ungueltige Ressourcen.")
+		return
+	# Check save technology and machine compatibility BEFORE mutating the economy.
+	var save_level: Variant = snapshot.get("tech_level", -1)
+	if typeof(save_level) != TYPE_INT and typeof(save_level) != TYPE_FLOAT:
+		hud.announce("Ungueltige Forschungsdaten.")
+		return
+	var level_number: int = int(save_level)
+	var count_by_kind: Dictionary = {}
+	for kind in IndustryState.MACHINES:
+		count_by_kind[kind] = 0
+	for kind in restored_pads:
+		if kind == "":
+			continue
+		count_by_kind[kind] = int(count_by_kind[kind]) + 1
+		if not IndustryState.UNLOCKS.has(kind) or level_number < int(IndustryState.UNLOCKS[kind]):
+			# Old alpha save files allowed the turret before research unlock.
+			if not (parsed.get("version") == 1 and kind == "turret"):
+				hud.announce("Spielstand enthaelt gesperrte Maschinen.")
+				return
+	if not state.restore(snapshot):
 		hud.announce("Spielstand enthaelt ungueltige Ressourcen.")
 		return
 	for e in enemies:
