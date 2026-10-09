@@ -30,8 +30,14 @@ def main() -> None:
     for source in (ROOT / "scripts").rglob("*.gd"):
         if source.name != "main.gd" and ("FileAccess." in source.read_text(encoding="utf-8") or "DirAccess." in source.read_text(encoding="utf-8")):
             raise SystemExit(f"Privacy audit failed: filesystem API in {source.name}")
-    if "get_as_text()" not in main_script or "FileAccess.open(SAVE_PATH, FileAccess.WRITE)" not in main_script:
+    if "get_as_text()" not in main_script or "FileAccess.open(SAVE_TEMP_PATH, FileAccess.WRITE)" not in main_script:
         raise SystemExit("Privacy audit failed: save/load implementation changed; manual review required.")
+    if 'const SAVE_TEMP_PATH := "user://void_save.pending"' not in main_script:
+        raise SystemExit("Privacy audit failed: save staging path must stay application-local.")
+    if "DirAccess.rename_absolute(source, destination)" not in main_script:
+        raise SystemExit("Privacy audit failed: atomic replacement mechanism changed.")
+    if "ProjectSettings.globalize_path(SAVE_TEMP_PATH)" not in main_script or "ProjectSettings.globalize_path(SAVE_PATH)" not in main_script:
+        raise SystemExit("Privacy audit failed: save path conversion changed.")
     if 'const SAVE_PATH := "user://void_save.json"' not in main_script:
         raise SystemExit("Privacy audit failed: fixed local save path changed.")
     print("PRIVACY_GUARDRAILS_PASS")

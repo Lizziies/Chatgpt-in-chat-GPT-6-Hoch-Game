@@ -8,6 +8,7 @@ const EnemyScript = preload("res://scripts/threat.gd")
 const HudScript = preload("res://scripts/hud.gd")
 const GridScript = preload("res://scripts/power_grid.gd")
 const SAVE_PATH := "user://void_save.json"
+const SAVE_TEMP_PATH := "user://void_save.pending"
 const SAVE_LIMIT := 32768
 
 var state: IndustryState
@@ -531,13 +532,25 @@ func _save_game() -> void:
 	if data_string.length() > SAVE_LIMIT:
 		hud.announce("Spielstand zu gross. Speichern abgebrochen.")
 		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	# First write to the fixed application-local staging file; only replace the
+	# previous save after a complete successful write.
+	var file := FileAccess.open(SAVE_TEMP_PATH, FileAccess.WRITE)
 	if file == null:
 		hud.announce("Speichern fehlgeschlagen (keine Dateiberechtigung).")
 		return
 	file.store_string(data_string)
+	file.flush()
+	if file.get_error() != OK:
+		file.close()
+		hud.announce("Speichern fehlgeschlagen: Schreibfehler.")
+		return
 	file.close()
-	hud.announce("LOKAL GESPEICHERT - Nur im Spielordner der Godot-Appdaten.")
+	var source: String = ProjectSettings.globalize_path(SAVE_TEMP_PATH)
+	var destination: String = ProjectSettings.globalize_path(SAVE_PATH)
+	if DirAccess.rename_absolute(source, destination) != OK:
+		hud.announce("Speichern fehlgeschlagen: Alte Datei bleibt bestehen.")
+		return
+	hud.announce("LOKAL UND SICHER GESPEICHERT - Nur im Godot-Appverzeichnis.")
 
 func _load_game() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):

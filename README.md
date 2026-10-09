@@ -73,7 +73,7 @@ Ressourcen erzeugen → Maschinen aufbauen → Forschungsstufen und neue Maschin
 - **Speicherformat v2 (historisch):** frühere Verbesserungen am lokalen Spielstand; die aktuelle Version verwendet v3.
 
 ### Spielstandsicherheit
-Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschinen geprüft. Nur das feste Godot-`user://`-Spielstandsverzeichnis wird verwendet. Spielstände werden **nicht** automatisch hochgeladen; es gibt keinen Cloud-Sync. Kein automatisches Speichern. Bei Absturz unmittelbar beim Speichern ist eine Beschädigung möglich – Backups sind für eine spätere Version geplant.
+Beim Laden wird JSON auf Größe, Struktur, Zahlenbereiche und erlaubte Maschinen geprüft. Nur das feste Godot-`user://`-Spielstandsverzeichnis wird verwendet. Spielstände werden **nicht** automatisch hochgeladen; es gibt keinen Cloud-Sync. Kein automatisches Speichern. Spielstände werden erst nach erfolgreichem Schreiben einer kleinen temporären Datei ersetzt; so soll ein Absturz während des Schreibvorgangs den bisherigen Stand nicht überschreiben. Zusätzliche Wiederherstellungs-Backups sind für eine spätere Version geplant.
 
 ## Roadmap
 - [x] GitHub-Projekt & Lizenz
