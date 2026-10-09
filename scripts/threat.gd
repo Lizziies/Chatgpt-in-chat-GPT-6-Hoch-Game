@@ -70,7 +70,8 @@ func _physics_process(delta: float) -> void:
 		objective = target.global_position
 	var flat_difference := objective - global_position
 	flat_difference.y = 0.0
-	if flat_difference.length() > 1.8:
+	var engagement_range: float = 1.6 if player_in_range else 4.25
+	if flat_difference.length() > engagement_range:
 		var heading := flat_difference.normalized()
 		velocity.x = heading.x * speed
 		velocity.z = heading.z * speed
